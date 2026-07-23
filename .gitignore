@@ -10,3 +10,16 @@ wordpress/wp-content/debug.log
 deployment/deploy.log*
 deployment/.last-successful-deploy*
 .DS_Store
+
+
+
+# Local WordPress-generated content
+wordpress/wp-content/index.php
+
+# Ignore all locally installed plugins
+wordpress/wp-content/plugins/
+
+# Ignore all themes except the custom LoopBuy theme
+wordpress/wp-content/themes/*
+!wordpress/wp-content/themes/LoopBuy/
+!wordpress/wp-content/themes/LoopBuy/**
