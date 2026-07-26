@@ -2118,30 +2118,6 @@ body.dark-mode .theme-toggle,
 	font-size: 0.95rem;
 }
 
-.footer-social {
-	display: flex;
-	gap: 10px;
-}
-
-.footer-social-link {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 36px;
-	height: 36px;
-	border: 1px solid var(--loopbuy-border);
-	border-radius: 10px;
-	color: var(--loopbuy-text);
-	font-weight: 700;
-	font-size: 0.85rem;
-}
-
-.footer-social-link:hover,
-.footer-social-link:focus {
-	background: var(--loopbuy-soft);
-	color: var(--loopbuy-text);
-}
-
 .site-info {
 	display: flex;
 	align-items: center;
