@@ -89,7 +89,7 @@
 					<span><?php esc_html_e( 'Saved', 'loopbuy' ); ?></span>
 				</a>
 
-				<a href="#" class="header-icon-link">
+				<a href="<?php echo esc_url( home_url( '/cart/' ) ); ?>" class="header-icon-link">
 					<svg width="19" height="19" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
 						<path d="M6 8V6a6 6 0 1 1 12 0v2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
 						<path d="M4.5 8H19.5L18.6 19.2A2 2 0 0 1 16.6 21H7.4A2 2 0 0 1 5.4 19.2L4.5 8Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
