@@ -66,7 +66,7 @@ Nicolas Gallagher and Jonathan Neal https://necolas.github.io/normalize.css/
  * 1. Correct the line height in all browsers.
  * 2. Prevent adjustments of font size after orientation changes in iOS.
  */
-html {
+ html {
 	line-height: 1.15;
 	-webkit-text-size-adjust: 100%;
 }
@@ -1917,5 +1917,233 @@ Add product-page-only styles with selectors such as:
 	.footer-widgets,
 	.footer-content {
 		grid-template-columns: 1fr;
+	}
+}
+
+/* ==========================================
+   9. HEADER ACTIONS
+========================================== */
+
+.site-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	border-radius: 12px;
+	background: var(--loopbuy-primary);
+	flex: 0 0 auto;
+}
+
+.header-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex: 0 0 auto;
+	margin-left: auto;
+}
+
+.theme-toggle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--loopbuy-text);
+	cursor: pointer;
+	transition: background 0.2s ease;
+}
+
+.theme-toggle:hover {
+	background: var(--loopbuy-soft);
+}
+
+.loopbuy-sell-button {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	white-space: nowrap;
+}
+
+.header-icon-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	padding: 10px 12px;
+	border-radius: 10px;
+	color: var(--loopbuy-text);
+	font-weight: 600;
+	font-size: 0.95rem;
+	white-space: nowrap;
+	transition: background 0.2s ease;
+}
+
+.header-icon-link:hover,
+.header-icon-link:focus {
+	background: var(--loopbuy-soft);
+	color: var(--loopbuy-text);
+}
+
+.header-icon-link svg {
+	flex: 0 0 auto;
+}
+
+.auth-link {
+	padding: 10px 14px;
+	border-radius: 10px;
+	font-weight: 600;
+	color: var(--loopbuy-text);
+	white-space: nowrap;
+}
+
+.auth-link:hover,
+.auth-link:focus {
+	background: var(--loopbuy-soft);
+	color: var(--loopbuy-text);
+}
+
+.auth-button {
+	display: inline-flex;
+	align-items: center;
+	padding: 10px 20px;
+	border-radius: 10px;
+	background: #16181d;
+	color: #fff !important;
+	font-weight: 700;
+	white-space: nowrap;
+	transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.auth-button:hover,
+.auth-button:focus {
+	background: #000;
+	color: #fff;
+	transform: translateY(-1px);
+}
+
+.site-header .menu-toggle {
+	display: none;
+	width: 40px;
+	height: 40px;
+	padding: 0;
+	border: 1px solid var(--loopbuy-border);
+	border-radius: 10px;
+	background: transparent;
+	color: var(--loopbuy-text);
+	font-size: 0;
+}
+
+.site-header .menu-toggle::before {
+	content: "\2630";
+	font-size: 18px;
+}
+
+.site-header .main-navigation {
+	flex-basis: 100%;
+}
+
+.site-header .main-navigation ul#primary-menu {
+	display: flex;
+}
+
+@media (max-width: 1050px) {
+	.header-icon-link span {
+		display: none;
+	}
+
+	.header-icon-link {
+		padding: 10px;
+	}
+}
+
+@media (max-width: 780px) {
+	.header-actions .auth-link,
+	.header-actions .header-icon-link {
+		display: none;
+	}
+
+	.site-header .menu-toggle {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.site-header .main-navigation ul#primary-menu {
+		display: none;
+		flex-direction: column;
+		align-items: stretch;
+		width: 100%;
+		padding: 10px 0;
+	}
+
+	.site-header .main-navigation.toggled ul#primary-menu {
+		display: flex;
+	}
+}
+
+/* ==========================================
+   10. FOOTER BRAND COLUMN
+========================================== */
+
+.footer-brand .site-branding {
+	margin-bottom: 14px;
+}
+
+.footer-tagline {
+	max-width: 320px;
+	margin: 0 0 18px;
+	color: var(--loopbuy-muted);
+	font-size: 0.95rem;
+}
+
+.footer-social {
+	display: flex;
+	gap: 10px;
+}
+
+.footer-social-link {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	border: 1px solid var(--loopbuy-border);
+	border-radius: 10px;
+	color: var(--loopbuy-text);
+	font-weight: 700;
+	font-size: 0.85rem;
+}
+
+.footer-social-link:hover,
+.footer-social-link:focus {
+	background: var(--loopbuy-soft);
+	color: var(--loopbuy-text);
+}
+
+.site-info {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	flex-wrap: wrap;
+}
+
+.footer-legal-links {
+	display: flex;
+	gap: 20px;
+}
+
+.footer-legal-links a:hover,
+.footer-legal-links a:focus {
+	color: var(--loopbuy-text);
+}
+
+@media (max-width: 600px) {
+	.site-info {
+		flex-direction: column;
+		align-items: flex-start;
 	}
 }
