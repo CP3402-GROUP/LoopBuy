@@ -1107,3 +1107,22 @@ elseif ($sort === 'price-high') {
 <?php
 get_footer();
 ?>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const filterButton = document.querySelector('.filter-button');
+    const filterPanel = document.querySelector('.product-filter-panel');
+
+    if (filterButton && filterPanel) {
+
+        filterButton.addEventListener('click', function () {
+
+            filterPanel.classList.toggle('show');
+
+        });
+
+    }
+
+});
+</script>

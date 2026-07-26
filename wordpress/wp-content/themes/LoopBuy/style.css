@@ -239,6 +239,7 @@ button,
 [type="reset"],
 [type="submit"] {
 	-webkit-appearance: button;
+	appearance: button;
 }
 
 /**
@@ -322,6 +323,7 @@ textarea {
  */
 [type="search"] {
 	-webkit-appearance: textfield;
+	appearance: textfield;
 	outline-offset: -2px;
 }
 
@@ -388,129 +390,6 @@ template {
 
 html {
 	box-sizing: border-box;
-}
-
-
-/* ==========================================
-   PRODUCT FILTER PANEL
-========================================== */
-
-.product-filter-panel {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 18px;
-    align-items: end;
-
-    padding: 18px;
-    margin: 15px 0 22px;
-
-    border: 1px solid #e4e4e4;
-    border-radius: 18px;
-
-    background: #ffffff;
-}
-
-.filter-field {
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-}
-
-.filter-field label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #666666;
-}
-
-.filter-field input,
-.filter-field select {
-    width: 100%;
-    height: 42px;
-
-    padding: 0 13px;
-
-    border: 1px solid #dddddd;
-    border-radius: 9px;
-
-    background: #ffffff;
-    color: #333333;
-
-    font-size: 14px;
-    outline: none;
-}
-
-.filter-field input:focus,
-.filter-field select:focus {
-    border-color: #6c7c9d;
-}
-
-.filter-field input::placeholder {
-    color: #a0a0a0;
-}
-
-
-/* Filter buttons */
-
-.filter-actions {
-    flex-direction: row;
-    align-items: center;
-    gap: 10px;
-}
-
-.apply-filter-button {
-    height: 42px;
-    padding: 0 18px;
-
-    border: none;
-    border-radius: 9px;
-
-    background: #687997;
-    color: white;
-
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.apply-filter-button:hover {
-    opacity: 0.9;
-}
-
-.clear-filter-button {
-    height: 42px;
-    padding: 0 15px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    border: 1px solid #dddddd;
-    border-radius: 9px;
-
-    background: white;
-    color: #555555;
-
-    text-decoration: none;
-}
-
-
-/* ==========================================
-   RESPONSIVE FILTERS
-========================================== */
-
-@media (max-width: 900px) {
-
-    .product-filter-panel {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-}
-
-@media (max-width: 600px) {
-
-    .product-filter-panel {
-        grid-template-columns: 1fr;
-    }
-
 }
 
 /*--------------------------------------------------------------
@@ -1091,9 +970,17 @@ textarea {
 	margin-bottom: 1.5em;
 }
 
-/*--------------------------------------------------------------
-# LoopBuy Marketplace Custom Styles
---------------------------------------------------------------*/
+/* ==========================================================
+   LOOPBUY CUSTOM STYLES
+
+   Team rule:
+   - Shared selectors may affect every page.
+   - Page selectors must begin with that page's wrapper class.
+========================================================== */
+
+/* ==========================================
+   1. GLOBAL / SHARED
+========================================== */
 
 :root {
 	--loopbuy-primary: #667792;
@@ -1153,7 +1040,7 @@ a:active {
 	margin-inline: auto;
 }
 
-/* Header */
+/* Shared header */
 .site-header {
 	position: sticky;
 	top: 0;
@@ -1200,7 +1087,7 @@ a:active {
 	color: var(--loopbuy-text);
 }
 
-/* Header search */
+/* Shared header search */
 .header-search,
 .site-search,
 .search-form {
@@ -1263,7 +1150,7 @@ a:active {
 	font-weight: 700;
 }
 
-/* Main navigation */
+/* Shared main navigation */
 .main-navigation {
 	width: auto;
 	margin-left: auto;
@@ -1316,10 +1203,15 @@ a:active {
 	transform: translateY(-1px);
 }
 
+/* ==========================================
+   2. HOME PAGE
+   Required wrapper: <main class="loopbuy-home">
+========================================== */
+
 /* Hero */
-.loopbuy-hero,
-.marketplace-hero,
-.home-hero {
+.loopbuy-home .loopbuy-hero,
+.loopbuy-home .marketplace-hero,
+.loopbuy-home .home-hero {
 	width: min(calc(100% - 40px), var(--loopbuy-container));
 	margin: 24px auto 30px;
 	padding: clamp(42px, 6vw, 72px) clamp(28px, 5vw, 52px);
@@ -1330,9 +1222,9 @@ a:active {
 	position: relative;
 }
 
-.loopbuy-hero::after,
-.marketplace-hero::after,
-.home-hero::after {
+.loopbuy-home .loopbuy-hero::after,
+.loopbuy-home .marketplace-hero::after,
+.loopbuy-home .home-hero::after {
 	content: "";
 	position: absolute;
 	width: 360px;
@@ -1343,16 +1235,16 @@ a:active {
 	background: rgba(255, 255, 255, 0.08);
 }
 
-.loopbuy-hero__content,
-.hero-content {
+.loopbuy-home .loopbuy-hero__content,
+.loopbuy-home .hero-content {
 	position: relative;
 	z-index: 1;
 	max-width: 650px;
 }
 
-.loopbuy-hero h1,
-.marketplace-hero h1,
-.home-hero h1 {
+.loopbuy-home .loopbuy-hero h1,
+.loopbuy-home .marketplace-hero h1,
+.loopbuy-home .home-hero h1 {
 	margin: 0 0 10px;
 	color: #fff;
 	font-size: clamp(2rem, 4.2vw, 3.25rem);
@@ -1360,22 +1252,22 @@ a:active {
 	letter-spacing: -0.045em;
 }
 
-.loopbuy-hero p,
-.marketplace-hero p,
-.home-hero p {
+.loopbuy-home .loopbuy-hero p,
+.loopbuy-home .marketplace-hero p,
+.loopbuy-home .home-hero p {
 	margin: 0 0 24px;
 	max-width: 590px;
 	color: rgba(255, 255, 255, 0.9);
 	font-size: 1.08rem;
 }
 
-.hero-search {
+.loopbuy-home .hero-search {
 	display: flex;
 	gap: 10px;
 	max-width: 500px;
 }
 
-.hero-search input {
+.loopbuy-home .hero-search input {
 	flex: 1;
 	min-width: 0;
 	height: 48px;
@@ -1386,7 +1278,7 @@ a:active {
 	color: var(--loopbuy-text);
 }
 
-.hero-search button {
+.loopbuy-home .hero-search button {
 	border: 0;
 	border-radius: 999px;
 	background: #18191d;
@@ -1397,9 +1289,9 @@ a:active {
 }
 
 /* Category pills */
-.category-filter,
-.category-pills,
-.product-categories {
+.loopbuy-home .category-filter,
+.loopbuy-home .category-pills,
+.loopbuy-home .product-categories {
 	width: min(calc(100% - 40px), var(--loopbuy-container));
 	margin: 0 auto 28px;
 	display: flex;
@@ -1410,10 +1302,10 @@ a:active {
 	scrollbar-width: thin;
 }
 
-.category-filter a,
-.category-pills a,
-.category-pill,
-.product-categories a {
+.loopbuy-home .category-filter a,
+.loopbuy-home .category-pills a,
+.loopbuy-home .category-pill,
+.loopbuy-home .product-categories a {
 	flex: 0 0 auto;
 	display: inline-flex;
 	align-items: center;
@@ -1428,20 +1320,20 @@ a:active {
 	transition: all 0.2s ease;
 }
 
-.category-filter a:hover,
-.category-pills a:hover,
-.category-pill:hover,
-.category-filter .active,
-.category-pills .active,
-.category-pill.active {
+.loopbuy-home .category-filter a:hover,
+.loopbuy-home .category-pills a:hover,
+.loopbuy-home .category-pill:hover,
+.loopbuy-home .category-filter .active,
+.loopbuy-home .category-pills .active,
+.loopbuy-home .category-pill.active {
 	background: var(--loopbuy-primary);
 	border-color: var(--loopbuy-primary);
 	color: #fff;
 }
 
 /* Product toolbar */
-.marketplace-toolbar,
-.products-toolbar {
+.loopbuy-home .marketplace-toolbar,
+.loopbuy-home .products-toolbar {
 	width: min(calc(100% - 40px), var(--loopbuy-container));
 	margin: 0 auto 18px;
 	display: flex;
@@ -1451,15 +1343,15 @@ a:active {
 	color: var(--loopbuy-muted);
 }
 
-.toolbar-actions {
+.loopbuy-home .toolbar-actions {
 	display: flex;
 	gap: 10px;
 }
 
-.toolbar-actions button,
-.toolbar-actions select,
-.filter-button,
-.sort-select {
+.loopbuy-home .toolbar-actions button,
+.loopbuy-home .toolbar-actions select,
+.loopbuy-home .filter-button,
+.loopbuy-home .sort-select {
 	height: 40px;
 	border: 1px solid var(--loopbuy-border);
 	border-radius: 10px;
@@ -1468,11 +1360,92 @@ a:active {
 	padding: 0 14px;
 }
 
+/* Filter panel: hidden until JavaScript adds the .show class */
+.loopbuy-home .product-filter-panel {
+	display: none;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 18px;
+	width: min(calc(100% - 40px), var(--loopbuy-container));
+	margin: 15px auto 22px;
+	padding: 18px;
+	border: 1px solid var(--loopbuy-border);
+	border-radius: 18px;
+	background: #fff;
+}
+
+.loopbuy-home .product-filter-panel.show {
+	display: grid;
+}
+
+.loopbuy-home .filter-field {
+	display: flex;
+	flex-direction: column;
+	gap: 7px;
+	min-width: 0;
+}
+
+.loopbuy-home .filter-field label {
+	color: var(--loopbuy-muted);
+	font-size: 0.8125rem;
+	font-weight: 600;
+}
+
+.loopbuy-home .filter-field input,
+.loopbuy-home .filter-field select {
+	box-sizing: border-box;
+	width: 100%;
+	height: 42px;
+	padding: 0 13px;
+	border: 1px solid var(--loopbuy-border);
+	border-radius: 9px;
+	background: #fff;
+	color: var(--loopbuy-text);
+	font-size: 0.875rem;
+}
+
+.loopbuy-home .filter-actions {
+	grid-column: 1 / -1;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.loopbuy-home .apply-filter-button,
+.loopbuy-home .clear-filter-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: auto;
+	min-height: 40px;
+	padding: 0 18px;
+	border-radius: 9px;
+	font-weight: 600;
+	line-height: 1;
+	white-space: nowrap;
+}
+
+.loopbuy-home .apply-filter-button {
+	border: 0;
+	background: var(--loopbuy-primary);
+	color: #fff;
+	cursor: pointer;
+}
+
+.loopbuy-home .clear-filter-button {
+	border: 1px solid var(--loopbuy-border);
+	background: #fff;
+	color: #555;
+}
+
+.loopbuy-home .apply-filter-button:hover {
+	background: var(--loopbuy-primary-dark);
+}
+
 /* Product grid */
-.products-grid,
-.marketplace-grid,
-.loopbuy-products,
-.woocommerce ul.products {
+.loopbuy-home .products-grid,
+.loopbuy-home .marketplace-grid,
+.loopbuy-home .loopbuy-products,
+.loopbuy-home .woocommerce ul.products {
 	width: min(calc(100% - 40px), var(--loopbuy-container));
 	margin: 0 auto 48px;
 	display: grid;
@@ -1482,10 +1455,10 @@ a:active {
 	padding: 0;
 }
 
-.product-card,
-.listing-card,
-.loopbuy-product-card,
-.woocommerce ul.products li.product {
+.loopbuy-home .product-card,
+.loopbuy-home .listing-card,
+.loopbuy-home .loopbuy-product-card,
+.loopbuy-home .woocommerce ul.products li.product {
 	position: relative;
 	margin: 0 !important;
 	width: 100% !important;
@@ -1497,19 +1470,19 @@ a:active {
 	transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
 }
 
-.product-card:hover,
-.listing-card:hover,
-.loopbuy-product-card:hover,
-.woocommerce ul.products li.product:hover {
+.loopbuy-home .product-card:hover,
+.loopbuy-home .listing-card:hover,
+.loopbuy-home .loopbuy-product-card:hover,
+.loopbuy-home .woocommerce ul.products li.product:hover {
 	transform: translateY(-5px);
 	box-shadow: var(--loopbuy-shadow);
 	border-color: #d8dce3;
 }
 
-.product-card img,
-.listing-card img,
-.loopbuy-product-card img,
-.woocommerce ul.products li.product img {
+.loopbuy-home .product-card img,
+.loopbuy-home .listing-card img,
+.loopbuy-home .loopbuy-product-card img,
+.loopbuy-home .woocommerce ul.products li.product img {
 	display: block;
 	width: 100%;
 	aspect-ratio: 1 / 1;
@@ -1518,29 +1491,29 @@ a:active {
 	background: #f2f3f5;
 }
 
-.product-card__body,
-.listing-card__body,
-.loopbuy-product-card__body,
-.woocommerce ul.products li.product .woocommerce-loop-product__link,
-.woocommerce ul.products li.product .price,
-.woocommerce ul.products li.product .button {
+.loopbuy-home .product-card__body,
+.loopbuy-home .listing-card__body,
+.loopbuy-home .loopbuy-product-card__body,
+.loopbuy-home .woocommerce ul.products li.product .woocommerce-loop-product__link,
+.loopbuy-home .woocommerce ul.products li.product .price,
+.loopbuy-home .woocommerce ul.products li.product .button {
 	margin-left: 16px;
 	margin-right: 16px;
 }
 
-.product-card__body,
-.listing-card__body,
-.loopbuy-product-card__body {
+.loopbuy-home .product-card__body,
+.loopbuy-home .listing-card__body,
+.loopbuy-home .loopbuy-product-card__body {
 	padding: 15px 0 17px;
 }
 
-.product-card h2,
-.product-card h3,
-.listing-card h2,
-.listing-card h3,
-.loopbuy-product-card h2,
-.loopbuy-product-card h3,
-.woocommerce ul.products li.product .woocommerce-loop-product__title {
+.loopbuy-home .product-card h2,
+.loopbuy-home .product-card h3,
+.loopbuy-home .listing-card h2,
+.loopbuy-home .listing-card h3,
+.loopbuy-home .loopbuy-product-card h2,
+.loopbuy-home .loopbuy-product-card h3,
+.loopbuy-home .woocommerce ul.products li.product .woocommerce-loop-product__title {
 	margin: 0 0 4px;
 	padding: 0;
 	font-size: 1rem;
@@ -1549,17 +1522,17 @@ a:active {
 	color: var(--loopbuy-text);
 }
 
-.product-brand,
-.product-meta,
-.listing-location {
+.loopbuy-home .product-brand,
+.loopbuy-home .product-meta,
+.loopbuy-home .listing-location {
 	margin: 0 0 5px;
 	color: var(--loopbuy-muted);
 	font-size: 0.88rem;
 }
 
-.product-price,
-.listing-price,
-.woocommerce ul.products li.product .price {
+.loopbuy-home .product-price,
+.loopbuy-home .listing-price,
+.loopbuy-home .woocommerce ul.products li.product .price {
 	display: block;
 	margin-top: 5px;
 	margin-bottom: 7px;
@@ -1568,30 +1541,47 @@ a:active {
 	font-weight: 800;
 }
 
-.condition-badge,
-.product-badge,
-.woocommerce span.onsale {
-	position: absolute;
-	top: 12px;
-	left: 12px;
-	z-index: 2;
-	min-height: auto;
-	min-width: auto;
-	line-height: 1;
-	padding: 7px 10px;
-	border-radius: 999px;
-	background: #e8f4ff;
-	color: #1671a8;
-	font-size: 0.75rem;
-	font-weight: 800;
+/* ==========================================
+   PRODUCT CONDITION BADGE
+========================================== */
+
+.loopbuy-home .condition-badge {
+    position: absolute;
+
+    top: 12px;
+    left: 12px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: auto;
+    height: auto;
+
+    padding: 5px 10px;
+
+    border-radius: 20px;
+
+    background: #dceeff;
+    color: #1671a5;
+
+    font-size: 12px;
+    font-weight: 700;
+
+    line-height: 1;
+
+    white-space: nowrap;
+
+    z-index: 3;
 }
 
-.condition-badge.good {
-	background: #fff3cd;
-	color: #a86600;
+/* Good condition */
+.loopbuy-home .condition-badge.condition-good {
+    background: #fff0c2;
+    color: #b56a00;
 }
 
-.favorite-button {
+.loopbuy-home .favorite-button {
 	position: absolute;
 	top: 12px;
 	right: 12px;
@@ -1608,13 +1598,16 @@ a:active {
 	cursor: pointer;
 }
 
-.favorite-button:hover {
+.loopbuy-home .favorite-button:hover {
 	background: #fff;
 	color: #d84b5b;
 	transform: scale(1.05);
 }
 
-/* Content pages */
+/* ==========================================
+   3. CONTENT PAGES / SHARED WORDPRESS CONTENT
+========================================== */
+
 .entry-header,
 .entry-content,
 .entry-footer {
@@ -1632,7 +1625,7 @@ a:active {
 	margin-top: 2rem;
 }
 
-/* Forms */
+/* Shared forms: these rules may affect every page */
 input[type="text"],
 input[type="email"],
 input[type="url"],
@@ -1678,7 +1671,43 @@ input[type="submit"]:hover {
 	background: var(--loopbuy-primary-dark);
 }
 
-/* Footer */
+/* ==========================================
+   4. CONTACT PAGE
+   Required wrapper: <main class="loopbuy-contact">
+========================================== */
+
+/*
+Add contact-only styles with selectors such as:
+.loopbuy-contact .contact-form { }
+.loopbuy-contact .contact-info { }
+*/
+
+/* ==========================================
+   5. LOGIN PAGE
+   Required wrapper: <main class="loopbuy-login">
+========================================== */
+
+/*
+Add login-only styles with selectors such as:
+.loopbuy-login .login-form { }
+.loopbuy-login .login-card { }
+*/
+
+/* ==========================================
+   6. PRODUCT PAGE
+   Required wrapper: <main class="loopbuy-product-page">
+========================================== */
+
+/*
+Add product-page-only styles with selectors such as:
+.loopbuy-product-page .product-details { }
+.loopbuy-product-page .seller-info { }
+*/
+
+/* ==========================================
+   7. SHARED FOOTER
+========================================== */
+
 .site-footer {
 	margin-top: 56px;
 	border-top: 1px solid var(--loopbuy-border);
@@ -1738,12 +1767,14 @@ input[type="submit"]:hover {
 	font-size: 0.9rem;
 }
 
-/* Responsive */
+/* ==========================================
+   8. RESPONSIVE
+========================================== */
 @media (max-width: 1050px) {
-	.products-grid,
-	.marketplace-grid,
-	.loopbuy-products,
-	.woocommerce ul.products {
+	.loopbuy-home .products-grid,
+	.loopbuy-home .marketplace-grid,
+	.loopbuy-home .loopbuy-products,
+	.loopbuy-home .woocommerce ul.products {
 		grid-template-columns: repeat(3, minmax(0, 1fr));
 	}
 
@@ -1761,6 +1792,10 @@ input[type="submit"]:hover {
 		flex-basis: 100%;
 		max-width: none;
 	}
+
+	.loopbuy-home .product-filter-panel.show {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
 }
 
 @media (max-width: 780px) {
@@ -1772,18 +1807,19 @@ input[type="submit"]:hover {
 	.site-header .site-header-inner,
 	.site-header .header-inner,
 	.site-header .container,
-	.loopbuy-hero,
-	.marketplace-hero,
-	.home-hero,
-	.category-filter,
-	.category-pills,
-	.product-categories,
-	.marketplace-toolbar,
-	.products-toolbar,
-	.products-grid,
-	.marketplace-grid,
-	.loopbuy-products,
-	.woocommerce ul.products,
+	.loopbuy-home .loopbuy-hero,
+	.loopbuy-home .marketplace-hero,
+	.loopbuy-home .home-hero,
+	.loopbuy-home .category-filter,
+	.loopbuy-home .category-pills,
+	.loopbuy-home .product-categories,
+	.loopbuy-home .marketplace-toolbar,
+	.loopbuy-home .products-toolbar,
+	.loopbuy-home .product-filter-panel,
+	.loopbuy-home .products-grid,
+	.loopbuy-home .marketplace-grid,
+	.loopbuy-home .loopbuy-products,
+	.loopbuy-home .woocommerce ul.products,
 	.site-footer .site-footer-inner,
 	.footer-widgets,
 	.footer-content,
@@ -1791,26 +1827,26 @@ input[type="submit"]:hover {
 		width: min(calc(100% - 28px), var(--loopbuy-container));
 	}
 
-	.products-grid,
-	.marketplace-grid,
-	.loopbuy-products,
-	.woocommerce ul.products {
+	.loopbuy-home .products-grid,
+	.loopbuy-home .marketplace-grid,
+	.loopbuy-home .loopbuy-products,
+	.loopbuy-home .woocommerce ul.products {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: 14px;
 	}
 
-	.loopbuy-hero,
-	.marketplace-hero,
-	.home-hero {
+	.loopbuy-home .loopbuy-hero,
+	.loopbuy-home .marketplace-hero,
+	.loopbuy-home .home-hero {
 		margin-top: 14px;
 		border-radius: 18px;
 	}
 
-	.hero-search {
+	.loopbuy-home .hero-search {
 		flex-direction: column;
 	}
 
-	.hero-search button {
+	.loopbuy-home .hero-search button {
 		height: 46px;
 	}
 
@@ -1821,26 +1857,42 @@ input[type="submit"]:hover {
 	}
 }
 
-@media (max-width: 520px) {
-	.products-grid,
-	.marketplace-grid,
-	.loopbuy-products,
-	.woocommerce ul.products {
+@media (max-width: 600px) {
+	.loopbuy-home .product-filter-panel.show {
 		grid-template-columns: 1fr;
 	}
 
-	.marketplace-toolbar,
-	.products-toolbar {
+	.loopbuy-home .filter-actions {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.loopbuy-home .apply-filter-button,
+	.loopbuy-home .clear-filter-button {
+		width: 100%;
+	}
+}
+
+@media (max-width: 520px) {
+	.loopbuy-home .products-grid,
+	.loopbuy-home .marketplace-grid,
+	.loopbuy-home .loopbuy-products,
+	.loopbuy-home .woocommerce ul.products {
+		grid-template-columns: 1fr;
+	}
+
+	.loopbuy-home .marketplace-toolbar,
+	.loopbuy-home .products-toolbar {
 		align-items: flex-start;
 		flex-direction: column;
 	}
 
-	.toolbar-actions {
+	.loopbuy-home .toolbar-actions {
 		width: 100%;
 	}
 
-	.toolbar-actions button,
-	.toolbar-actions select {
+	.loopbuy-home .toolbar-actions button,
+	.loopbuy-home .toolbar-actions select {
 		flex: 1;
 	}
 
