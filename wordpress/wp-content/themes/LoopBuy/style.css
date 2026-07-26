@@ -1390,6 +1390,7 @@ a:active {
 	font-weight: 600;
 }
 
+/* input */
 .loopbuy-home .filter-field input,
 .loopbuy-home .filter-field select {
 	box-sizing: border-box;
@@ -1403,13 +1404,17 @@ a:active {
 	font-size: 0.875rem;
 }
 
+/* Action row */
 .loopbuy-home .filter-actions {
 	grid-column: 1 / -1;
 	display: flex;
+	flex-direction: row;
 	align-items: center;
+	justify-content: flex-start;
 	gap: 10px;
 }
 
+/* buttons */
 .loopbuy-home .apply-filter-button,
 .loopbuy-home .clear-filter-button {
 	display: inline-flex;
@@ -1435,6 +1440,7 @@ a:active {
 	border: 1px solid var(--loopbuy-border);
 	background: #fff;
 	color: #555;
+	text-decoration: none;
 }
 
 .loopbuy-home .apply-filter-button:hover {
@@ -1542,43 +1548,55 @@ a:active {
 }
 
 /* ==========================================
-   PRODUCT CONDITION BADGE
+   PRODUCT CONDITION BADGES
 ========================================== */
 
-.loopbuy-home .condition-badge {
-    position: absolute;
-
-    top: 12px;
-    left: 12px;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    width: auto;
-    height: auto;
-
-    padding: 5px 10px;
-
-    border-radius: 20px;
-
-    background: #dceeff;
-    color: #1671a5;
-
-    font-size: 12px;
-    font-weight: 700;
-
-    line-height: 1;
-
-    white-space: nowrap;
-
-    z-index: 3;
+.loopbuy-home .product-image {
+	position: relative;
 }
 
-/* Good condition */
+
+.loopbuy-home .condition-badge {
+	position: absolute;
+
+	top: 12px;
+	left: 12px;
+
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+
+	width: fit-content !important;
+	min-width: 0 !important;
+	max-width: max-content;
+
+	height: auto !important;
+	min-height: 0;
+
+	padding: 5px 10px;
+
+	margin: 0;
+
+	border: 0;
+	border-radius: 999px;
+
+	background: #dceeff;
+	color: #1671a5;
+
+	font-size: 12px;
+	font-weight: 700;
+	line-height: 1;
+
+	white-space: nowrap;
+
+	z-index: 3;
+}
+
+
+/* Good */
 .loopbuy-home .condition-badge.condition-good {
-    background: #fff0c2;
-    color: #b56a00;
+	background: #fff0c2;
+	color: #a96500;
 }
 
 .loopbuy-home .favorite-button {
