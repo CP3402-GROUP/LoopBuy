@@ -82,7 +82,7 @@
 					<?php esc_html_e( 'Sell', 'loopbuy' ); ?>
 				</a>
 
-				<a href="#" class="header-icon-link">
+				<a href="<?php echo esc_url( home_url( '/saved/' ) ); ?>" class="header-icon-link">
 					<svg width="19" height="19" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
 						<path d="M12 20.5s-7.5-4.6-10-9.3C.5 7.8 2.4 4.5 6 4.5c2.1 0 3.6 1.2 6 3.7 2.4-2.5 3.9-3.7 6-3.7 3.6 0 5.5 3.3 4 6.7-2.5 4.7-10 9.3-10 9.3Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
 					</svg>

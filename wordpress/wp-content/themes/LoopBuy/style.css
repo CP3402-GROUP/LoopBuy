@@ -2333,3 +2333,64 @@ body.dark-mode .theme-toggle,
 		grid-template-columns: 1fr;
 	}
 }
+
+/* ==========================================
+   12. SAVED / CART PAGES
+   Required wrappers: <div class="page loopbuy-saved">, <div class="page loopbuy-cart">
+========================================== */
+
+.loopbuy-page-title {
+	margin: 0 0 24px;
+	font-size: clamp(1.6rem, 3vw, 2rem);
+	font-weight: 800;
+	letter-spacing: -0.03em;
+}
+
+.loopbuy-empty-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	border: 1.5px dashed var(--loopbuy-border);
+	border-radius: var(--loopbuy-radius);
+	padding: clamp(56px, 10vw, 100px) 24px;
+	margin-bottom: 48px;
+}
+
+.loopbuy-empty-state-icon {
+	color: #c7cbd4;
+	margin-bottom: 22px;
+}
+
+.loopbuy-empty-state-title {
+	margin: 0 0 8px;
+	font-size: 1.2rem;
+	font-weight: 800;
+	color: var(--loopbuy-text);
+}
+
+.loopbuy-empty-state-text {
+	margin: 0 0 26px;
+	color: var(--loopbuy-muted);
+	font-size: 0.98rem;
+}
+
+.loopbuy-empty-state-button {
+	display: inline-flex;
+	align-items: center;
+	border: 0;
+	border-radius: 12px;
+	background: var(--loopbuy-primary);
+	color: #fff !important;
+	padding: 13px 26px;
+	font-weight: 700;
+	transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.loopbuy-empty-state-button:hover,
+.loopbuy-empty-state-button:focus-visible {
+	background: var(--loopbuy-primary-dark);
+	color: #fff;
+	transform: translateY(-1px);
+}
