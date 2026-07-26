@@ -69,9 +69,9 @@
 
 			<div class="header-actions">
 
-				<button type="button" class="theme-toggle" id="loopbuy-theme-toggle" aria-label="<?php esc_attr_e( 'Toggle dark mode', 'loopbuy' ); ?>">
-					<svg width="19" height="19" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-						<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+				<button type="button" class="theme-toggle" id="loopbuy-theme-toggle" aria-label="<?php esc_attr_e( 'Toggle dark mode', 'loopbuy' ); ?>" aria-pressed="false">
+					<svg width="19" height="19" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+						<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
 					</svg>
 				</button>
 
@@ -111,20 +111,24 @@
 					<a href="<?php echo esc_url( wp_registration_url() ); ?>" class="auth-button"><?php esc_html_e( 'Sign up', 'loopbuy' ); ?></a>
 				<?php endif; ?>
 
-				<button class="menu-toggle" aria-controls="primary-menu" aria-expanded="false"><?php esc_html_e( 'Menu', 'loopbuy' ); ?></button>
+				<?php if ( has_nav_menu( 'menu-1' ) ) : ?>
+					<button class="menu-toggle" aria-controls="primary-menu" aria-expanded="false"><?php esc_html_e( 'Menu', 'loopbuy' ); ?></button>
+				<?php endif; ?>
 
 			</div><!-- .header-actions -->
 
-			<nav id="site-navigation" class="main-navigation">
-				<?php
-				wp_nav_menu(
-					array(
-						'theme_location' => 'menu-1',
-						'menu_id'        => 'primary-menu',
-					)
-				);
-				?>
-			</nav><!-- #site-navigation -->
+			<?php if ( has_nav_menu( 'menu-1' ) ) : ?>
+				<nav id="site-navigation" class="main-navigation">
+					<?php
+					wp_nav_menu(
+						array(
+							'theme_location' => 'menu-1',
+							'menu_id'        => 'primary-menu',
+						)
+					);
+					?>
+				</nav><!-- #site-navigation -->
+			<?php endif; ?>
 
 		</div><!-- .site-header-inner -->
 	</header><!-- #masthead -->

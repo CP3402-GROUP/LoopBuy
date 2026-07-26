@@ -1056,10 +1056,12 @@ a:active {
 .site-header .container {
 	min-height: 76px;
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
-	gap: 22px;
+	gap: 16px 22px;
 	width: min(calc(100% - 40px), var(--loopbuy-container));
 	margin-inline: auto;
+	padding-block: 14px;
 }
 
 .site-branding {
@@ -1092,8 +1094,9 @@ a:active {
 .site-search,
 .search-form {
 	position: relative;
-	flex: 1 1 520px;
-	max-width: 680px;
+	flex: 10000 1 340px;
+	min-width: 260px;
+	max-width: 760px;
 }
 
 .search-form label {
@@ -1947,18 +1950,34 @@ Add product-page-only styles with selectors such as:
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 40px;
-	height: 40px;
-	border: 0;
+	width: 42px;
+	height: 42px;
+	border: 1.5px solid var(--loopbuy-border);
 	border-radius: 999px;
-	background: transparent;
+	background: var(--loopbuy-soft);
 	color: var(--loopbuy-text);
 	cursor: pointer;
-	transition: background 0.2s ease;
+	flex: 0 0 auto;
+	transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
-.theme-toggle:hover {
-	background: var(--loopbuy-soft);
+.theme-toggle svg {
+	stroke: currentColor;
+}
+
+.theme-toggle:hover,
+.theme-toggle:focus-visible {
+	background: var(--loopbuy-text);
+	border-color: var(--loopbuy-text);
+	color: #fff;
+	transform: translateY(-1px);
+}
+
+body.dark-mode .theme-toggle,
+.theme-toggle[aria-pressed="true"] {
+	background: var(--loopbuy-text);
+	border-color: var(--loopbuy-text);
+	color: #ffd166;
 }
 
 .loopbuy-sell-button {
