@@ -31,7 +31,7 @@ $products = [
         'location' => 'Orchard',
         'condition' => 'Like New',
         'category' => 'electronics',
-        'image' => 'image1.jpg'
+        'image' => 'iphone.webp'
     ],
 
     [
@@ -41,7 +41,7 @@ $products = [
         'location' => 'Bishan',
         'condition' => 'Good',
         'category' => 'electronics',
-        'image' => 'image2.jpg'
+        'image' => 'wireless_headphone.jpeg'
     ],
 
     [
@@ -51,7 +51,7 @@ $products = [
         'location' => 'Tampines',
         'condition' => 'Like New',
         'category' => 'electronics',
-        'image' => 'image3.jpg'
+        'image' => 'Samsung_Galaxy_S23.webp'
     ],
 
     [
@@ -61,7 +61,7 @@ $products = [
         'location' => 'Jurong East',
         'condition' => 'Good',
         'category' => 'electronics',
-        'image' => 'image4.jpg'
+        'image' => 'MacBook_Air_M2.avif'
     ],
 
 
@@ -76,7 +76,7 @@ $products = [
         'location' => 'Tampines',
         'condition' => 'Like New',
         'category' => 'fashion',
-        'image' => 'image5.jpg'
+        'image' => 'Leather_jacket.jpg'
     ],
 
     [
@@ -86,7 +86,7 @@ $products = [
         'location' => 'Jurong',
         'condition' => 'Good',
         'category' => 'fashion',
-        'image' => 'image6.jpg'
+        'image' => 'Nike_Running_Shoes.avif'
     ],
 
     [
@@ -96,7 +96,7 @@ $products = [
         'location' => 'Bugis',
         'condition' => 'Good',
         'category' => 'fashion',
-        'image' => 'image7.jpg'
+        'image' => 'Denim_Jacket.webp'
     ],
 
     [
@@ -106,7 +106,7 @@ $products = [
         'location' => 'Woodlands',
         'condition' => 'Like New',
         'category' => 'fashion',
-        'image' => 'image8.jpg'
+        'image' => 'charles__keith_black_handbag.jpg'
     ],
 
 
@@ -121,7 +121,7 @@ $products = [
         'location' => 'Punggol',
         'condition' => 'Like New',
         'category' => 'gaming',
-        'image' => 'image9.jpg'
+        'image' => 'PlayStation5.jpg'
     ],
 
     [
@@ -131,7 +131,7 @@ $products = [
         'location' => 'Serangoon',
         'condition' => 'Good',
         'category' => 'gaming',
-        'image' => 'image10.jpg'
+        'image' => 'Nintendo_Switch_OLED.avif'
     ],
 
     [
@@ -141,7 +141,7 @@ $products = [
         'location' => 'Hougang',
         'condition' => 'Good',
         'category' => 'gaming',
-        'image' => 'image11.jpg'
+        'image' => 'Xbox_Series_S.jpg'
     ],
 
     [
@@ -151,7 +151,7 @@ $products = [
         'location' => 'Clementi',
         'condition' => 'Like New',
         'category' => 'gaming',
-        'image' => 'image12.jpg'
+        'image' => 'Gaming_Mechanical_Keyboard.jpg'
     ],
 
 
@@ -166,7 +166,7 @@ $products = [
         'location' => 'East Coast',
         'condition' => 'Like New',
         'category' => 'sports',
-        'image' => 'image13.jpg'
+        'image' => 'Mountain_Bike_Trek.webp'
     ],
 
     [
@@ -176,7 +176,7 @@ $products = [
         'location' => 'Bishan',
         'condition' => 'Good',
         'category' => 'sports',
-        'image' => 'image14.jpg'
+        'image' => 'Wilson_Tennis_Racket.webp'
     ],
 
     [
@@ -186,7 +186,7 @@ $products = [
         'location' => 'Yishun',
         'condition' => 'Good',
         'category' => 'sports',
-        'image' => 'image15.jpg'
+        'image' => 'Adidas_Football.jpg'
     ],
 
     [
@@ -196,7 +196,7 @@ $products = [
         'location' => 'Novena',
         'condition' => 'Like New',
         'category' => 'sports',
-        'image' => 'image16.jpg'
+        'image' => 'Yoga_Mat_Premium.jpg'
     ],
 
 
@@ -211,17 +211,17 @@ $products = [
         'location' => 'Ang Mo Kio',
         'condition' => 'Good',
         'category' => 'home-appliances',
-        'image' => 'image17.jpg'
+        'image' => 'Air_Fryer.webp'
     ],
 
     [
-        'name' => 'Rice Cooker',
+        'name' => 'Microwave Oven',
         'brand' => 'Panasonic',
         'price' => 50,
         'location' => 'Toa Payoh',
         'condition' => 'Good',
         'category' => 'home-appliances',
-        'image' => 'image18.jpg'
+        'image' => 'microwave.jpeg'
     ],
 
     [
@@ -231,7 +231,7 @@ $products = [
         'location' => 'Bedok',
         'condition' => 'Like New',
         'category' => 'home-appliances',
-        'image' => 'image19.jpg'
+        'image' => 'Vacuum_Cleaner.webp'
     ],
 
     [
@@ -241,7 +241,7 @@ $products = [
         'location' => 'Queenstown',
         'condition' => 'Like New',
         'category' => 'home-appliances',
-        'image' => 'image20.jpg'
+        'image' => 'Coffee_Machine.webp'
     ],
 
 
@@ -256,7 +256,7 @@ $products = [
         'location' => 'Bukit Timah',
         'condition' => 'Good',
         'category' => 'books',
-        'image' => 'image21.jpg'
+        'image' => 'Harry_Potter_Book_Set_Bloomsbury.jpeg'
     ],
 
     [
@@ -266,7 +266,7 @@ $products = [
         'location' => 'Clementi',
         'condition' => 'Like New',
         'category' => 'books',
-        'image' => 'image22.jpg'
+        'image' => 'Atomic_Habits_James_Clear.webp'
     ],
 
     [
@@ -276,7 +276,7 @@ $products = [
         'location' => 'Jurong East',
         'condition' => 'Good',
         'category' => 'books',
-        'image' => 'image23.jpg'
+        'image' => 'Python_Programming_Book.jpeg'
     ],
 
     [
@@ -286,7 +286,7 @@ $products = [
         'location' => 'Orchard',
         'condition' => 'Like New',
         'category' => 'books',
-        'image' => 'image24.jpg'
+        'image' => 'The_Psychology_of_Money_.webp'
     ],
 
 
@@ -301,7 +301,7 @@ $products = [
         'location' => 'Woodlands',
         'condition' => 'Good',
         'category' => 'furniture',
-        'image' => 'image25.jpg'
+        'image' => 'Wooden_Desk.jpeg'
     ],
 
     [
@@ -311,7 +311,7 @@ $products = [
         'location' => 'Tampines',
         'condition' => 'Good',
         'category' => 'furniture',
-        'image' => 'image26.jpg'
+        'image' => 'Office_Chair.jpeg'
     ],
 
     [
@@ -321,7 +321,7 @@ $products = [
         'location' => 'Sengkang',
         'condition' => 'Like New',
         'category' => 'furniture',
-        'image' => 'image27.jpg'
+        'image' => '/Three_Seater_Sofa.jpg'
     ],
 
     [
@@ -331,7 +331,7 @@ $products = [
         'location' => 'Pasir Ris',
         'condition' => 'Good',
         'category' => 'furniture',
-        'image' => 'image28.jpg'
+        'image' => 'Bedside_Table.avif'
     ],
 
 
@@ -346,7 +346,7 @@ $products = [
         'location' => 'Bishan',
         'condition' => 'Good',
         'category' => 'others',
-        'image' => 'image29.jpg'
+        'image' => 'Acoustic_Guitar.webp'
     ],
 
     [
@@ -356,7 +356,7 @@ $products = [
         'location' => 'Orchard',
         'condition' => 'Like New',
         'category' => 'others',
-        'image' => 'image30.jpg'
+        'image' => 'Digital_Camera_Canon.jpeg'
     ],
 
     [
@@ -366,7 +366,7 @@ $products = [
         'location' => 'Changi',
         'condition' => 'Good',
         'category' => 'others',
-        'image' => 'image31.jpg'
+        'image' => 'Travel_Suitcase_Samsonite.jpg'
     ],
 
     [
@@ -376,7 +376,7 @@ $products = [
         'location' => 'Bugis',
         'condition' => 'Like New',
         'category' => 'others',
-        'image' => 'image32.jpg'
+        'image' => 'Electric_Guitar_Fender.jpeg'
     ]
 
 ];
@@ -960,117 +960,69 @@ elseif ($sort === 'price-high') {
                 <?php foreach ($filtered_products as $product) : ?>
 
 
-                    <article class="product-card">
+					<article class="product-card">
+
+						<div class="product-image">
+
+							<?php if ($product['condition'] === 'Good') : ?>
+
+								<span class="condition-badge condition-good">
+									Good
+								</span>
+
+							<?php else : ?>
+
+								<span class="condition-badge condition-like-new">
+									Like New
+								</span>
+
+							<?php endif; ?>
 
 
-                        <!-- PRODUCT IMAGE -->
-
-                        <div class="product-image">
-
-
-                            <span
-                                class="condition-badge
-                                <?php
-                                echo $product['condition'] === 'Good'
-                                    ? 'condition-good'
-                                    : '';
-                                ?>"
-                            >
-
-                                <?php
-                                echo esc_html(
-                                    $product['condition']
-                                );
-                                ?>
-
-                            </span>
+							<button
+								class="favourite-button"
+								type="button"
+								aria-label="Save product"
+							>
+								♡
+							</button>
 
 
+							<img
+								src="<?php
+								echo esc_url(
+									get_template_directory_uri()
+									. '/images/'
+									. $product['image']
+								);
+								?>"
+								alt="<?php echo esc_attr($product['name']); ?>"
+							>
 
-                            <button
-                                class="favourite-button"
-                                type="button"
-                                aria-label="Save product"
-                            >
-                                ♡
-                            </button>
-
-
-
-                            <img
-                                src="<?php
-                                echo esc_url(
-                                    get_template_directory_uri()
-                                    . '/images/'
-                                    . $product['image']
-                                );
-                                ?>"
-                                alt="<?php
-                                echo esc_attr(
-                                    $product['name']
-                                );
-                                ?>"
-                            >
+						</div>
 
 
-                        </div>
+						<div class="product-content">
 
+							<h2>
+								<?php echo esc_html($product['name']); ?>
+							</h2>
 
+							<p class="product-brand">
+								<?php echo esc_html($product['brand']); ?>
+							</p>
 
-                        <!-- PRODUCT INFORMATION -->
+							<p class="product-price">
+								$<?php echo number_format($product['price']); ?>
+							</p>
 
-                        <div class="product-content">
+							<p class="product-location">
+								⌖ <?php echo esc_html($product['location']); ?>
+							</p>
 
+						</div>
 
-                            <h2>
-
-                                <?php
-                                echo esc_html(
-                                    $product['name']
-                                );
-                                ?>
-
-                            </h2>
-
-
-                            <p class="product-brand">
-
-                                <?php
-                                echo esc_html(
-                                    $product['brand']
-                                );
-                                ?>
-
-                            </p>
-
-
-                            <p class="product-price">
-
-                                $<?php
-                                echo number_format(
-                                    $product['price']
-                                );
-                                ?>
-
-                            </p>
-
-
-                            <p class="product-location">
-
-                                ⌖
-                                <?php
-                                echo esc_html(
-                                    $product['location']
-                                );
-                                ?>
-
-                            </p>
-
-
-                        </div>
-
-
-                    </article>
+					</article>
 
 
                 <?php endforeach; ?>

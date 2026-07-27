@@ -1551,37 +1551,54 @@ a:active {
 }
 
 /* ==========================================
-   PRODUCT CONDITION BADGES
+   PRODUCT IMAGE
 ========================================== */
 
 .loopbuy-home .product-image {
 	position: relative;
 	overflow: hidden;
+	background: #f4f4f4;
 }
 
 
-/* Like New */
-.loopbuy-home .condition-badge {
-	position: absolute;
-	top: 12px;
-	left: 12px;
+/* Product image itself */
+.loopbuy-home .product-image img {
+	display: block;
+	width: 100%;
+	height: 300px;
+	object-fit: cover;
+}
 
-	display: inline-flex;
+
+/* ==========================================
+   CONDITION BADGES
+========================================== */
+
+.loopbuy-home .product-image .condition-badge {
+	position: absolute !important;
+
+	top: 12px !important;
+	left: 12px !important;
+
+	right: auto !important;
+	bottom: auto !important;
+
+	display: inline-flex !important;
 	align-items: center;
 	justify-content: center;
 
 	width: auto !important;
 	min-width: 0 !important;
+	max-width: none !important;
+
 	height: auto !important;
+	min-height: 0 !important;
 
-	padding: 6px 11px;
-	margin: 0;
+	padding: 6px 11px !important;
+	margin: 0 !important;
 
-	border: none;
-	border-radius: 999px;
-
-	background: #dceeff;
-	color: #1671a5;
+	border: none !important;
+	border-radius: 999px !important;
 
 	font-size: 12px;
 	font-weight: 700;
@@ -1589,14 +1606,21 @@ a:active {
 
 	white-space: nowrap;
 
-	z-index: 3;
+	z-index: 10;
+}
+
+
+/* Like New */
+.loopbuy-home .product-image .condition-like-new {
+	background: #dceeff !important;
+	color: #1671a5 !important;
 }
 
 
 /* Good */
-.loopbuy-home .condition-badge.condition-good {
-	background: #fff0c2;
-	color: #a96500;
+.loopbuy-home .product-image .condition-good {
+	background: #fff0c2 !important;
+	color: #a96500 !important;
 }
 
 
@@ -1604,20 +1628,21 @@ a:active {
    FAVOURITE BUTTON
 ========================================== */
 
-.loopbuy-home .favourite-button {
+.loopbuy-home .product-image .favourite-button {
 	position: absolute;
+
 	top: 12px;
 	right: 12px;
 
-	z-index: 3;
+	width: 38px;
+	height: 38px;
 
-	width: 40px;
-	height: 40px;
-
-	display: grid;
-	place-items: center;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 
 	padding: 0;
+	margin: 0;
 
 	border: 1px solid #e5e7eb;
 	border-radius: 50%;
@@ -1625,16 +1650,16 @@ a:active {
 	background: rgba(255, 255, 255, 0.95);
 	color: #6b7280;
 
-	font-size: 22px;
-	line-height: 1;
+	font-size: 21px;
 
 	cursor: pointer;
+
+	z-index: 10;
 }
 
-.loopbuy-home .favourite-button:hover {
+.loopbuy-home .product-image .favourite-button:hover {
 	background: #ffffff;
 	color: #d84b5b;
-	transform: scale(1.05);
 }
 
 /* ==========================================
