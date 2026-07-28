@@ -2886,3 +2886,312 @@ body.dark-mode .theme-toggle,
 		flex-direction: column;
 	}
 }
+
+
+/* ==========================================
+   15. PROFILE PAGE
+   Required wrapper: <div class="page loopbuy-profile">
+========================================== */
+
+.loopbuy-profile-wrap {
+	width: min(calc(100% - 40px), 1040px);
+	margin: 0 auto;
+	padding: 48px 0 80px;
+}
+
+.loopbuy-profile-summary {
+	display: flex;
+	align-items: center;
+	gap: 20px;
+	border: 1px solid var(--loopbuy-border);
+	border-radius: var(--loopbuy-radius);
+	background: var(--loopbuy-surface);
+	padding: clamp(20px, 3vw, 28px);
+	margin-bottom: 24px;
+}
+
+.loopbuy-profile-avatar {
+	flex: 0 0 auto;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 80px;
+	height: 80px;
+	border-radius: 50%;
+	background: var(--loopbuy-primary);
+	color: #fff;
+	font-weight: 700;
+	font-size: 1.9rem;
+	overflow: hidden;
+}
+
+.loopbuy-profile-avatar img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.loopbuy-profile-summary-name {
+	margin: 0 0 2px;
+	font-size: 1.3rem;
+	font-weight: 800;
+	color: var(--loopbuy-text);
+}
+
+.loopbuy-profile-summary-email {
+	margin: 0 0 10px;
+	color: var(--loopbuy-muted);
+	font-size: 0.98rem;
+}
+
+.loopbuy-profile-summary-meta {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--loopbuy-muted);
+	font-size: 0.92rem;
+}
+
+.loopbuy-profile-summary-meta svg {
+	flex: 0 0 auto;
+}
+
+.loopbuy-profile-grid {
+	display: grid;
+	grid-template-columns: 380px 1fr;
+	gap: 24px;
+	align-items: start;
+}
+
+.loopbuy-profile-col-left {
+	display: flex;
+	flex-direction: column;
+	gap: 24px;
+	min-width: 0;
+}
+
+.loopbuy-profile-card {
+	border: 1px solid var(--loopbuy-border);
+	border-radius: var(--loopbuy-radius);
+	background: var(--loopbuy-surface);
+	padding: clamp(22px, 3vw, 28px);
+}
+
+.loopbuy-profile-card-title {
+	margin: 0 0 20px;
+	font-size: 1.15rem;
+	font-weight: 800;
+	color: var(--loopbuy-text);
+}
+
+.loopbuy-profile-card-header-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 20px;
+}
+
+.loopbuy-profile-card-header-row .loopbuy-profile-card-title {
+	margin-bottom: 0;
+}
+
+.loopbuy-profile-new-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	color: var(--loopbuy-primary);
+	font-weight: 700;
+	font-size: 0.92rem;
+}
+
+.loopbuy-profile-new-link:hover,
+.loopbuy-profile-new-link:focus-visible {
+	color: var(--loopbuy-primary-dark);
+}
+
+.loopbuy-profile-photo-row {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	margin-bottom: 24px;
+}
+
+.loopbuy-profile-photo-avatar {
+	flex: 0 0 auto;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 56px;
+	height: 56px;
+	border-radius: 50%;
+	background: var(--loopbuy-primary);
+	color: #fff;
+	font-weight: 700;
+	font-size: 1.2rem;
+	overflow: hidden;
+}
+
+.loopbuy-profile-photo-avatar img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.loopbuy-profile-photo-button {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	border: 1px solid var(--loopbuy-border);
+	border-radius: 10px;
+	background: var(--loopbuy-surface);
+	color: var(--loopbuy-text);
+	padding: 10px 16px;
+	font-weight: 600;
+	font-size: 0.92rem;
+	cursor: pointer;
+	transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.loopbuy-profile-photo-button:hover,
+.loopbuy-profile-photo-button:focus-visible {
+	background: var(--loopbuy-soft);
+	border-color: var(--loopbuy-primary);
+}
+
+.loopbuy-profile-photo-input {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}
+
+.loopbuy-profile-field {
+	margin-bottom: 20px;
+}
+
+.loopbuy-profile-field label {
+	display: block;
+	margin-bottom: 8px;
+	font-weight: 600;
+	font-size: 0.9rem;
+	color: var(--loopbuy-muted);
+}
+
+.loopbuy-profile-field input[type="text"],
+.loopbuy-profile-field input[type="tel"],
+.loopbuy-profile-field textarea {
+	box-sizing: border-box;
+	width: 100%;
+	padding: 12px 14px;
+	border: 1px solid var(--loopbuy-border);
+	border-radius: 12px;
+	background: #fbfbfc;
+	color: var(--loopbuy-text);
+	font-family: inherit;
+	font-size: 0.95rem;
+	outline: none;
+	transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.loopbuy-profile-field textarea {
+	resize: vertical;
+	min-height: 110px;
+}
+
+.loopbuy-profile-field input:focus,
+.loopbuy-profile-field textarea:focus {
+	background: #fff;
+	border-color: var(--loopbuy-primary);
+	box-shadow: 0 0 0 4px rgba(102, 119, 146, 0.14);
+}
+
+.loopbuy-profile-save {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	border: 0;
+	border-radius: 12px;
+	background: var(--loopbuy-primary);
+	color: #fff;
+	padding: 13px 22px;
+	font-weight: 700;
+	font-size: 0.95rem;
+	cursor: pointer;
+	transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.loopbuy-profile-save:hover,
+.loopbuy-profile-save:focus-visible {
+	background: var(--loopbuy-primary-dark);
+	transform: translateY(-1px);
+}
+
+.loopbuy-profile-status {
+	margin: 0 0 20px;
+	font-size: 0.9rem;
+	font-weight: 600;
+}
+
+.loopbuy-profile-status[data-state="success"] {
+	color: var(--loopbuy-teal);
+}
+
+.loopbuy-profile-status[data-state="error"] {
+	color: #b3261e;
+}
+
+.loopbuy-profile-empty {
+	margin: 0;
+	color: var(--loopbuy-muted);
+	font-size: 0.95rem;
+}
+
+.loopbuy-profile-listings {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.loopbuy-profile-listing-item a {
+	display: block;
+	padding: 12px 14px;
+	border: 1px solid var(--loopbuy-border);
+	border-radius: 12px;
+	color: var(--loopbuy-text);
+	font-weight: 600;
+	font-size: 0.95rem;
+	transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.loopbuy-profile-listing-item a:hover,
+.loopbuy-profile-listing-item a:focus-visible {
+	background: var(--loopbuy-soft);
+	border-color: var(--loopbuy-primary);
+	color: var(--loopbuy-text);
+}
+
+.loopbuy-profile-login-notice {
+	max-width: 480px;
+	margin: 64px auto;
+	text-align: center;
+	border: 1px solid var(--loopbuy-border);
+	border-radius: var(--loopbuy-radius);
+	background: var(--loopbuy-surface);
+	padding: 40px 28px;
+}
+
+.loopbuy-profile-login-notice p {
+	margin: 0 0 20px;
+	color: var(--loopbuy-muted);
+}
+
+@media (max-width: 860px) {
+	.loopbuy-profile-grid {
+		grid-template-columns: 1fr;
+	}
+}
