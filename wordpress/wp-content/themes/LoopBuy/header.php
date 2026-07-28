@@ -105,7 +105,65 @@
 				</a>
 
 				<?php if ( is_user_logged_in() ) : ?>
-					<a href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>" class="auth-link"><?php esc_html_e( 'Log out', 'loopbuy' ); ?></a>
+					<?php
+					$loopbuy_current_user  = wp_get_current_user();
+					$loopbuy_user_name     = $loopbuy_current_user->display_name ? $loopbuy_current_user->display_name : $loopbuy_current_user->user_login;
+					$loopbuy_user_initial  = strtoupper( substr( $loopbuy_user_name, 0, 1 ) );
+					?>
+					<div class="loopbuy-user-menu">
+						<button
+							type="button"
+							class="loopbuy-user-avatar"
+							id="loopbuy-user-menu-button"
+							aria-haspopup="true"
+							aria-expanded="false"
+							aria-controls="loopbuy-user-dropdown"
+						>
+							<?php echo esc_html( $loopbuy_user_initial ); ?>
+							<span class="screen-reader-text"><?php esc_html_e( 'Account menu', 'loopbuy' ); ?></span>
+						</button>
+
+						<div class="loopbuy-user-dropdown" id="loopbuy-user-dropdown" role="menu" aria-labelledby="loopbuy-user-menu-button" hidden>
+							<div class="loopbuy-user-dropdown-header">
+								<p class="loopbuy-user-dropdown-name"><?php echo esc_html( $loopbuy_user_name ); ?></p>
+								<p class="loopbuy-user-dropdown-email"><?php echo esc_html( $loopbuy_current_user->user_email ); ?></p>
+							</div>
+
+							<ul class="loopbuy-user-dropdown-list">
+								<li>
+									<a href="<?php echo esc_url( home_url( '/profile/' ) ); ?>" role="menuitem">
+										<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+										<?php esc_html_e( 'Profile', 'loopbuy' ); ?>
+									</a>
+								</li>
+								<li>
+									<a href="<?php echo esc_url( home_url( '/my-listings/' ) ); ?>" role="menuitem">
+										<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8l9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
+										<?php esc_html_e( 'My Listings', 'loopbuy' ); ?>
+									</a>
+								</li>
+								<li>
+									<a href="<?php echo esc_url( home_url( '/orders/' ) ); ?>" role="menuitem">
+										<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/><path d="M9 12h6M9 16h6M9 8h1"/></svg>
+										<?php esc_html_e( 'Orders', 'loopbuy' ); ?>
+									</a>
+								</li>
+								<li>
+									<a href="<?php echo esc_url( home_url( '/chat/' ) ); ?>" role="menuitem">
+										<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>
+										<?php esc_html_e( 'Messages', 'loopbuy' ); ?>
+									</a>
+								</li>
+							</ul>
+
+							<div class="loopbuy-user-dropdown-footer">
+								<a href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>" class="loopbuy-user-dropdown-logout" role="menuitem">
+									<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+									<?php esc_html_e( 'Log out', 'loopbuy' ); ?>
+								</a>
+							</div>
+						</div>
+					</div>
 				<?php else : ?>
 					<a href="<?php echo esc_url( wp_login_url() ); ?>" class="auth-link"><?php esc_html_e( 'Log in', 'loopbuy' ); ?></a>
 					<a href="<?php echo esc_url( wp_registration_url() ); ?>" class="auth-button"><?php esc_html_e( 'Sign up', 'loopbuy' ); ?></a>
@@ -116,6 +174,51 @@
 				<?php endif; ?>
 
 			</div><!-- .header-actions -->
+
+			<?php if ( is_user_logged_in() ) : ?>
+				<script>
+				( function () {
+					var toggle = document.getElementById( 'loopbuy-user-menu-button' );
+					var menu   = document.getElementById( 'loopbuy-user-dropdown' );
+
+					if ( ! toggle || ! menu ) {
+						return;
+					}
+
+					function closeMenu() {
+						menu.hidden = true;
+						toggle.setAttribute( 'aria-expanded', 'false' );
+					}
+
+					function openMenu() {
+						menu.hidden = false;
+						toggle.setAttribute( 'aria-expanded', 'true' );
+					}
+
+					toggle.addEventListener( 'click', function ( event ) {
+						event.stopPropagation();
+						if ( menu.hidden ) {
+							openMenu();
+						} else {
+							closeMenu();
+						}
+					} );
+
+					document.addEventListener( 'click', function ( event ) {
+						if ( ! menu.hidden && ! menu.contains( event.target ) && event.target !== toggle ) {
+							closeMenu();
+						}
+					} );
+
+					document.addEventListener( 'keydown', function ( event ) {
+						if ( 'Escape' === event.key && ! menu.hidden ) {
+							closeMenu();
+							toggle.focus();
+						}
+					} );
+				} )();
+				</script>
+			<?php endif; ?>
 
 			<?php if ( has_nav_menu( 'menu-1' ) ) : ?>
 				<nav id="site-navigation" class="main-navigation">
