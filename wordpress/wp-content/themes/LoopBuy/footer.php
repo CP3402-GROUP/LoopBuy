@@ -9,6 +9,16 @@
  * @package LoopBuy
  */
 
+// Resolve the About and Contact pages by slug once, up front, so they
+// keep working however permalinks are configured and are available to
+// every footer column below (Company and Support both link to them).
+// Falls back to /about/ and /contact/ if the pages haven't been
+// created in wp-admin yet.
+$loopbuy_about_page   = get_page_by_path( 'about' );
+$loopbuy_about_url    = $loopbuy_about_page ? get_permalink( $loopbuy_about_page ) : home_url( '/about/' );
+$loopbuy_contact_page = get_page_by_path( 'contact' );
+$loopbuy_contact_url  = $loopbuy_contact_page ? get_permalink( $loopbuy_contact_page ) : home_url( '/contact/' );
+
 ?>
 
 	<footer id="colophon" class="site-footer">
@@ -59,17 +69,6 @@
 				<?php if ( is_active_sidebar( 'footer-company' ) ) : ?>
 					<?php dynamic_sidebar( 'footer-company' ); ?>
 				<?php else : ?>
-					<?php
-					// Resolve the About page by slug so this keeps working
-					// however permalinks are configured. Falls back to
-					// /about/ if the page hasn't been created in wp-admin yet.
-					$loopbuy_about_page = get_page_by_path( 'about' );
-					$loopbuy_about_url  = $loopbuy_about_page ? get_permalink( $loopbuy_about_page ) : home_url( '/about/' );
-
-					// Same resolution for the Contact page.
-					$loopbuy_contact_page = get_page_by_path( 'contact' );
-					$loopbuy_contact_url  = $loopbuy_contact_page ? get_permalink( $loopbuy_contact_page ) : home_url( '/contact/' );
-					?>
 					<ul>
 						<li><a href="<?php echo esc_url( $loopbuy_about_url ); ?>"><?php esc_html_e( 'About', 'loopbuy' ); ?></a></li>
 						<li><a href="<?php echo esc_url( $loopbuy_contact_url ); ?>"><?php esc_html_e( 'Contact', 'loopbuy' ); ?></a></li>
@@ -85,10 +84,10 @@
 					<?php dynamic_sidebar( 'footer-support' ); ?>
 				<?php else : ?>
 					<ul>
-						<li><a href="#"><?php esc_html_e( 'Help Center', 'loopbuy' ); ?></a></li>
-						<li><a href="#"><?php esc_html_e( 'Safety Tips', 'loopbuy' ); ?></a></li>
-						<li><a href="#"><?php esc_html_e( 'Report a Listing', 'loopbuy' ); ?></a></li>
-						<li><a href="#"><?php esc_html_e( 'FAQ', 'loopbuy' ); ?></a></li>
+						<li><a href="<?php echo esc_url( $loopbuy_contact_url ); ?>"><?php esc_html_e( 'Help Center', 'loopbuy' ); ?></a></li>
+						<li><a href="<?php echo esc_url( $loopbuy_contact_url ); ?>"><?php esc_html_e( 'Safety Tips', 'loopbuy' ); ?></a></li>
+						<li><a href="<?php echo esc_url( $loopbuy_contact_url ); ?>"><?php esc_html_e( 'Report a Listing', 'loopbuy' ); ?></a></li>
+						<li><a href="<?php echo esc_url( $loopbuy_contact_url ); ?>"><?php esc_html_e( 'FAQ', 'loopbuy' ); ?></a></li>
 					</ul>
 				<?php endif; ?>
 			</div>
