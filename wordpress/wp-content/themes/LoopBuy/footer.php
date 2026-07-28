@@ -65,10 +65,14 @@
 					// /about/ if the page hasn't been created in wp-admin yet.
 					$loopbuy_about_page = get_page_by_path( 'about' );
 					$loopbuy_about_url  = $loopbuy_about_page ? get_permalink( $loopbuy_about_page ) : home_url( '/about/' );
+
+					// Same resolution for the Contact page.
+					$loopbuy_contact_page = get_page_by_path( 'contact' );
+					$loopbuy_contact_url  = $loopbuy_contact_page ? get_permalink( $loopbuy_contact_page ) : home_url( '/contact/' );
 					?>
 					<ul>
 						<li><a href="<?php echo esc_url( $loopbuy_about_url ); ?>"><?php esc_html_e( 'About', 'loopbuy' ); ?></a></li>
-						<li><a href="#"><?php esc_html_e( 'Contact', 'loopbuy' ); ?></a></li>
+						<li><a href="<?php echo esc_url( $loopbuy_contact_url ); ?>"><?php esc_html_e( 'Contact', 'loopbuy' ); ?></a></li>
 						<li><a href="#"><?php esc_html_e( 'My Listings', 'loopbuy' ); ?></a></li>
 						<li><a href="#"><?php esc_html_e( 'Orders', 'loopbuy' ); ?></a></li>
 					</ul>

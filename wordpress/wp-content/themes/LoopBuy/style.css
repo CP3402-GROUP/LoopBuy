@@ -2566,3 +2566,190 @@ body.dark-mode .theme-toggle,
 		grid-template-columns: 1fr;
 	}
 }
+
+
+/* ==========================================
+   14. CONTACT PAGE
+   Required wrapper: <div class="page loopbuy-contact">
+========================================== */
+
+.loopbuy-contact-wrap {
+	width: min(calc(100% - 40px), 1040px);
+	margin: 0 auto;
+	padding: 64px 0 80px;
+}
+
+.loopbuy-contact-header {
+	max-width: 640px;
+	margin: 0 auto 48px;
+	text-align: center;
+}
+
+.loopbuy-contact-title {
+	margin: 0 0 14px;
+	font-size: clamp(2rem, 4vw, 2.75rem);
+	font-weight: 800;
+	letter-spacing: -0.03em;
+	color: var(--loopbuy-text);
+}
+
+.loopbuy-contact-subtitle {
+	margin: 0;
+	color: var(--loopbuy-muted);
+	font-size: 1.05rem;
+	line-height: 1.6;
+}
+
+.loopbuy-contact-grid {
+	display: grid;
+	grid-template-columns: 320px 1fr;
+	gap: 40px;
+	align-items: start;
+}
+
+.loopbuy-contact-info {
+	display: flex;
+	flex-direction: column;
+	gap: 28px;
+}
+
+.loopbuy-contact-info-item {
+	display: flex;
+	align-items: flex-start;
+	gap: 16px;
+}
+
+.loopbuy-contact-info-icon {
+	flex: 0 0 auto;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 48px;
+	height: 48px;
+	border-radius: 12px;
+	background: var(--loopbuy-primary);
+	color: #fff;
+}
+
+.loopbuy-contact-info-title {
+	margin: 0 0 4px;
+	font-size: 1.02rem;
+	font-weight: 700;
+	color: var(--loopbuy-text);
+}
+
+.loopbuy-contact-info-detail {
+	margin: 0;
+	color: var(--loopbuy-muted);
+	font-size: 0.95rem;
+}
+
+.loopbuy-contact-form {
+	border: 1px solid var(--loopbuy-border);
+	border-radius: var(--loopbuy-radius);
+	background: var(--loopbuy-surface);
+	box-shadow: var(--loopbuy-shadow);
+	padding: clamp(24px, 4vw, 36px);
+}
+
+.loopbuy-contact-field {
+	margin-bottom: 24px;
+}
+
+.loopbuy-contact-field:last-of-type {
+	margin-bottom: 28px;
+}
+
+.loopbuy-contact-field label {
+	display: block;
+	margin-bottom: 8px;
+	font-weight: 700;
+	font-size: 0.95rem;
+	color: var(--loopbuy-text);
+}
+
+.loopbuy-contact-field input[type="text"],
+.loopbuy-contact-field input[type="email"],
+.loopbuy-contact-field textarea {
+	box-sizing: border-box;
+	width: 100%;
+	padding: 13px 15px;
+	border: 1px solid var(--loopbuy-border);
+	border-radius: 12px;
+	background: #fbfbfc;
+	color: var(--loopbuy-text);
+	font-family: inherit;
+	font-size: 0.95rem;
+	outline: none;
+	transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.loopbuy-contact-field textarea {
+	resize: vertical;
+	min-height: 150px;
+}
+
+.loopbuy-contact-field input::placeholder,
+.loopbuy-contact-field textarea::placeholder {
+	color: #9aa0ab;
+}
+
+.loopbuy-contact-field input:focus,
+.loopbuy-contact-field textarea:focus {
+	background: #fff;
+	border-color: var(--loopbuy-primary);
+	box-shadow: 0 0 0 4px rgba(102, 119, 146, 0.14);
+}
+
+.loopbuy-contact-submit {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	border: 0;
+	border-radius: 12px;
+	background: var(--loopbuy-primary);
+	color: #fff;
+	padding: 14px 26px;
+	font-weight: 700;
+	font-size: 0.98rem;
+	cursor: pointer;
+	transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.loopbuy-contact-submit:hover,
+.loopbuy-contact-submit:focus-visible {
+	background: var(--loopbuy-primary-dark);
+	transform: translateY(-1px);
+}
+
+.loopbuy-contact-status {
+	margin: 16px 0 0;
+	font-size: 0.92rem;
+	font-weight: 600;
+}
+
+.loopbuy-contact-status[data-state="success"] {
+	color: var(--loopbuy-teal);
+}
+
+.loopbuy-contact-status[data-state="error"] {
+	color: #b3261e;
+}
+
+@media (max-width: 780px) {
+	.loopbuy-contact-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.loopbuy-contact-info {
+		flex-direction: row;
+		flex-wrap: wrap;
+		gap: 24px 32px;
+	}
+}
+
+@media (max-width: 460px) {
+	.loopbuy-contact-info {
+		flex-direction: column;
+	}
+}
