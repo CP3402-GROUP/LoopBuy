@@ -59,8 +59,15 @@
 				<?php if ( is_active_sidebar( 'footer-company' ) ) : ?>
 					<?php dynamic_sidebar( 'footer-company' ); ?>
 				<?php else : ?>
+					<?php
+					// Resolve the About page by slug so this keeps working
+					// however permalinks are configured. Falls back to
+					// /about/ if the page hasn't been created in wp-admin yet.
+					$loopbuy_about_page = get_page_by_path( 'about' );
+					$loopbuy_about_url  = $loopbuy_about_page ? get_permalink( $loopbuy_about_page ) : home_url( '/about/' );
+					?>
 					<ul>
-						<li><a href="#"><?php esc_html_e( 'About', 'loopbuy' ); ?></a></li>
+						<li><a href="<?php echo esc_url( $loopbuy_about_url ); ?>"><?php esc_html_e( 'About', 'loopbuy' ); ?></a></li>
 						<li><a href="#"><?php esc_html_e( 'Contact', 'loopbuy' ); ?></a></li>
 						<li><a href="#"><?php esc_html_e( 'My Listings', 'loopbuy' ); ?></a></li>
 						<li><a href="#"><?php esc_html_e( 'Orders', 'loopbuy' ); ?></a></li>
