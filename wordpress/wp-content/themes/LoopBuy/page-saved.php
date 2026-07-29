@@ -201,5 +201,85 @@ require get_template_directory()
 
 </main>
 
+<script>
+/* =========================================================
+   REVEAL SAVED PRODUCTS
+   Reads the same localStorage key that index.php writes to.
+========================================================= */
+document.addEventListener('DOMContentLoaded', function () {
+
+	var STORAGE_KEY = 'loopbuy_saved_products';
+
+	var emptyMessage = document.getElementById('saved-empty-message');
+	var cards = document.querySelectorAll('.saved-product-card');
+
+	function getSavedIds() {
+		try {
+			var raw = window.localStorage.getItem(STORAGE_KEY);
+			var ids = raw ? JSON.parse(raw) : [];
+			return Array.isArray(ids) ? ids.map(String) : [];
+		} catch (e) {
+			return [];
+		}
+	}
+
+	function setSavedIds(ids) {
+		try {
+			window.localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+		} catch (e) {}
+	}
+
+	function updateSavedCountBadge(count) {
+		var badge = document.querySelector('[data-saved-count]');
+		if (badge) {
+			badge.textContent = count;
+			badge.hidden = count === 0;
+		}
+	}
+
+	function render() {
+		var savedIds = getSavedIds();
+		var visibleCount = 0;
+
+		cards.forEach(function (card) {
+			var id = card.getAttribute('data-product-id');
+			var isSaved = savedIds.indexOf(id) !== -1;
+
+			card.style.display = isSaved ? '' : 'none';
+
+			if (isSaved) {
+				visibleCount++;
+			}
+		});
+
+		emptyMessage.style.display = visibleCount === 0 ? '' : 'none';
+		updateSavedCountBadge(visibleCount);
+	}
+
+	cards.forEach(function (card) {
+		var button = card.querySelector('.favourite-button');
+		var id = card.getAttribute('data-product-id');
+
+		if (!button) {
+			return;
+		}
+
+		button.addEventListener('click', function (event) {
+			event.preventDefault();
+
+			var ids = getSavedIds().filter(function (savedId) {
+				return savedId !== id;
+			});
+
+			setSavedIds(ids);
+			render();
+		});
+	});
+
+	render();
+
+});
+</script>
+
 <?php
 get_footer();

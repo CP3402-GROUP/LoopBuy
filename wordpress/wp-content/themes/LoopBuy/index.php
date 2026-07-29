@@ -746,7 +746,79 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
+<script>
+/* =========================================================
+   SAVE / UNSAVE PRODUCTS (heart button on product cards)
+   Persists to localStorage so page-saved.php can read it.
+========================================================= */
+document.addEventListener('DOMContentLoaded', function () {
+
+	var STORAGE_KEY = 'loopbuy_saved_products';
+
+	function getSavedIds() {
+		try {
+			var raw = window.localStorage.getItem(STORAGE_KEY);
+			var ids = raw ? JSON.parse(raw) : [];
+			return Array.isArray(ids) ? ids.map(String) : [];
+		} catch (e) {
+			return [];
+		}
+	}
+
+	function setSavedIds(ids) {
+		try {
+			window.localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+		} catch (e) {}
+	}
+
+	function updateButtonState(button, saved) {
+		button.classList.toggle('active', saved);
+		button.textContent = saved ? '♥' : '♡';
+		button.setAttribute('aria-pressed', saved ? 'true' : 'false');
+	}
+
+	function updateSavedCountBadge(count) {
+		var badge = document.querySelector('[data-saved-count]');
+		if (badge) {
+			badge.textContent = count;
+			badge.hidden = count === 0;
+		}
+	}
+
+	var savedIds = getSavedIds();
+	var favouriteButtons = document.querySelectorAll('.product-card .favourite-button');
+
+	favouriteButtons.forEach(function (button) {
+		var id = button.getAttribute('data-product-id');
+
+		updateButtonState(button, savedIds.indexOf(id) !== -1);
+
+		button.addEventListener('click', function (event) {
+			event.preventDefault();
+
+			var ids = getSavedIds();
+			var index = ids.indexOf(id);
+			var nowSaved;
+
+			if (index !== -1) {
+				ids.splice(index, 1);
+				nowSaved = false;
+			} else {
+				ids.push(id);
+				nowSaved = true;
+			}
+
+			setSavedIds(ids);
+			updateButtonState(button, nowSaved);
+			updateSavedCountBadge(ids.length);
+		});
+	});
+
+	updateSavedCountBadge(savedIds.length);
+
+});
+</script>
+
 <?php
 get_footer();
 ?>
-
