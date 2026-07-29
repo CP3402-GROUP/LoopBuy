@@ -9,27 +9,197 @@
  * @package LoopBuy
  */
 
+
 get_header();
+
+require get_template_directory()
+	. '/inc/product-data.php';
 ?>
 
-<main id="primary" class="site-main">
-	<div class="page loopbuy-saved">
+<main class="loopbuy-saved-page">
 
-		<h1 class="loopbuy-page-title"><?php esc_html_e( 'Saved Items', 'loopbuy' ); ?></h1>
+	<section class="saved-page-container">
 
-		<div class="loopbuy-empty-state">
-			<svg width="56" height="56" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="loopbuy-empty-state-icon">
-				<path d="M12 20.5s-7.5-4.6-10-9.3C.5 7.8 2.4 4.5 6 4.5c2.1 0 3.6 1.2 6 3.7 2.4-2.5 3.9-3.7 6-3.7 3.6 0 5.5 3.3 4 6.7-2.5 4.7-10 9.3-10 9.3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-			</svg>
+		<div class="saved-page-heading">
 
-			<p class="loopbuy-empty-state-title"><?php esc_html_e( 'No saved items yet', 'loopbuy' ); ?></p>
-			<p class="loopbuy-empty-state-text"><?php esc_html_e( 'Tap the heart on any listing to save it.', 'loopbuy' ); ?></p>
+			<h1>Saved Items</h1>
 
-			<a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="loopbuy-empty-state-button"><?php esc_html_e( 'Browse listings', 'loopbuy' ); ?></a>
+			<p>
+				Your favourite second-hand products.
+			</p>
+
 		</div>
 
-	</div><!-- .loopbuy-saved -->
-</main><!-- #primary -->
+
+		<div
+			id="saved-empty-message"
+			class="saved-empty-message"
+		>
+
+			<div class="saved-empty-icon">
+				♡
+			</div>
+
+			<h2>No saved items yet</h2>
+
+			<p>
+				Click the heart button on a product
+				to save it here.
+			</p>
+
+			<a
+				class="saved-browse-button"
+				href="<?php echo esc_url(home_url('/')); ?>"
+			>
+				Browse Products
+			</a>
+
+		</div>
+
+
+		<div class="saved-products-grid">
+
+			<?php foreach ($products as $product) : ?>
+
+				<article
+					class="saved-product-card"
+					data-product-id="<?php
+					echo esc_attr($product['id']);
+					?>"
+					style="display: none;"
+				>
+
+					<div class="saved-product-image">
+
+						<span
+							class="saved-condition-badge
+							<?php
+							echo (
+								$product['condition']
+								=== 'Good'
+							)
+								? 'condition-good'
+								: 'condition-like-new';
+							?>"
+						>
+							<?php
+							echo esc_html(
+								$product['condition']
+							);
+							?>
+						</span>
+
+
+						<button
+							class="favourite-button active"
+							type="button"
+							data-product-id="<?php
+							echo esc_attr($product['id']);
+							?>"
+							aria-label="Remove saved product"
+						>
+							♥
+						</button>
+
+
+						<a
+							href="<?php
+							echo esc_url(
+								home_url(
+									'/product-detail/?id='
+									. $product['id']
+								)
+							);
+							?>"
+						>
+
+							<img
+								src="<?php
+								echo esc_url(
+									get_template_directory_uri()
+									. '/images/'
+									. $product['image']
+								);
+								?>"
+								alt="<?php
+								echo esc_attr(
+									$product['name']
+								);
+								?>"
+							>
+
+						</a>
+
+					</div>
+
+
+					<div class="saved-product-content">
+
+						<a
+							class="saved-product-title-link"
+							href="<?php
+							echo esc_url(
+								home_url(
+									'/product-detail/?id='
+									. $product['id']
+								)
+							);
+							?>"
+						>
+
+							<h2>
+								<?php
+								echo esc_html(
+									$product['name']
+								);
+								?>
+							</h2>
+
+						</a>
+
+
+						<p class="saved-product-brand">
+							<?php
+							echo esc_html(
+								$product['brand']
+							);
+							?>
+						</p>
+
+
+						<p class="saved-product-price">
+							$<?php
+							echo esc_html(
+								number_format(
+									(float) $product['price'],
+									0
+								)
+							);
+							?>
+						</p>
+
+
+						<p class="saved-product-location">
+							<span aria-hidden="true">⌖</span>
+
+							<?php
+							echo esc_html(
+								$product['location']
+							);
+							?>
+						</p>
+
+					</div>
+
+				</article>
+
+			<?php endforeach; ?>
+
+		</div>
+
+	</section>
+
+</main>
 
 <?php
 get_footer();

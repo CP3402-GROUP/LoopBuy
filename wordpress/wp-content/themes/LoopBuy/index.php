@@ -13,373 +13,9 @@
  */
 get_header();
 
-/* =========================================================
-   PRODUCT DATA
-   Later database/backend can replace this array.
-========================================================= */
+/* Load product data */
+require get_template_directory() . '/inc/product-data.php';
 
-$products = [
-
-    /* =========================
-       ELECTRONICS
-    ========================= */
-
-    [
-        'name' => 'iPhone 14 Pro',
-        'brand' => 'Apple',
-        'price' => 750,
-        'location' => 'Orchard',
-        'condition' => 'Like New',
-        'category' => 'electronics',
-        'image' => 'iphone.webp'
-    ],
-
-    [
-        'name' => 'Wireless Headphones',
-        'brand' => 'Sony',
-        'price' => 120,
-        'location' => 'Bishan',
-        'condition' => 'Good',
-        'category' => 'electronics',
-        'image' => 'wireless_headphone.jpeg'
-    ],
-
-    [
-        'name' => 'Samsung Galaxy S23',
-        'brand' => 'Samsung',
-        'price' => 650,
-        'location' => 'Tampines',
-        'condition' => 'Like New',
-        'category' => 'electronics',
-        'image' => 'Samsung_Galaxy_S23.webp'
-    ],
-
-    [
-        'name' => 'MacBook Air M2',
-        'brand' => 'Apple',
-        'price' => 980,
-        'location' => 'Jurong East',
-        'condition' => 'Good',
-        'category' => 'electronics',
-        'image' => 'MacBook_Air_M2.avif'
-    ],
-
-
-    /* =========================
-       FASHION
-    ========================= */
-
-    [
-        'name' => 'Leather Jacket',
-        'brand' => 'Zara',
-        'price' => 85,
-        'location' => 'Tampines',
-        'condition' => 'Like New',
-        'category' => 'fashion',
-        'image' => 'Leather_jacket.jpg'
-    ],
-
-    [
-        'name' => 'Nike Running Shoes',
-        'brand' => 'Nike',
-        'price' => 95,
-        'location' => 'Jurong',
-        'condition' => 'Good',
-        'category' => 'fashion',
-        'image' => 'Nike_Running_Shoes.avif'
-    ],
-
-    [
-        'name' => 'Denim Jacket',
-        'brand' => 'Levi\'s',
-        'price' => 60,
-        'location' => 'Bugis',
-        'condition' => 'Good',
-        'category' => 'fashion',
-        'image' => 'Denim_Jacket.webp'
-    ],
-
-    [
-        'name' => 'Classic Handbag',
-        'brand' => 'Charles & Keith',
-        'price' => 55,
-        'location' => 'Woodlands',
-        'condition' => 'Like New',
-        'category' => 'fashion',
-        'image' => 'charles__keith_black_handbag.jpg'
-    ],
-
-
-    /* =========================
-       GAMING
-    ========================= */
-
-    [
-        'name' => 'PlayStation 5',
-        'brand' => 'Sony',
-        'price' => 480,
-        'location' => 'Punggol',
-        'condition' => 'Like New',
-        'category' => 'gaming',
-        'image' => 'PlayStation5.jpg'
-    ],
-
-    [
-        'name' => 'Nintendo Switch OLED',
-        'brand' => 'Nintendo',
-        'price' => 320,
-        'location' => 'Serangoon',
-        'condition' => 'Good',
-        'category' => 'gaming',
-        'image' => 'Nintendo_Switch_OLED.avif'
-    ],
-
-    [
-        'name' => 'Xbox Series S',
-        'brand' => 'Microsoft',
-        'price' => 280,
-        'location' => 'Hougang',
-        'condition' => 'Good',
-        'category' => 'gaming',
-        'image' => 'Xbox_Series_S.jpg'
-    ],
-
-    [
-        'name' => 'Gaming Mechanical Keyboard',
-        'brand' => 'Razer',
-        'price' => 80,
-        'location' => 'Clementi',
-        'condition' => 'Like New',
-        'category' => 'gaming',
-        'image' => 'Gaming_Mechanical_Keyboard.jpg'
-    ],
-
-
-    /* =========================
-       SPORTS
-    ========================= */
-
-    [
-        'name' => 'Mountain Bike Trek',
-        'brand' => 'Trek',
-        'price' => 320,
-        'location' => 'East Coast',
-        'condition' => 'Like New',
-        'category' => 'sports',
-        'image' => 'Mountain_Bike_Trek.webp'
-    ],
-
-    [
-        'name' => 'Wilson Tennis Racket',
-        'brand' => 'Wilson',
-        'price' => 70,
-        'location' => 'Bishan',
-        'condition' => 'Good',
-        'category' => 'sports',
-        'image' => 'Wilson_Tennis_Racket.webp'
-    ],
-
-    [
-        'name' => 'Adidas Football',
-        'brand' => 'Adidas',
-        'price' => 35,
-        'location' => 'Yishun',
-        'condition' => 'Good',
-        'category' => 'sports',
-        'image' => 'Adidas_Football.jpg'
-    ],
-
-    [
-        'name' => 'Yoga Mat Premium',
-        'brand' => 'Manduka',
-        'price' => 45,
-        'location' => 'Novena',
-        'condition' => 'Like New',
-        'category' => 'sports',
-        'image' => 'Yoga_Mat_Premium.jpg'
-    ],
-
-
-    /* =========================
-       HOME APPLIANCES
-    ========================= */
-
-    [
-        'name' => 'Air Fryer',
-        'brand' => 'Philips',
-        'price' => 75,
-        'location' => 'Ang Mo Kio',
-        'condition' => 'Good',
-        'category' => 'home-appliances',
-        'image' => 'Air_Fryer.webp'
-    ],
-
-    [
-        'name' => 'Microwave Oven',
-        'brand' => 'Panasonic',
-        'price' => 50,
-        'location' => 'Toa Payoh',
-        'condition' => 'Good',
-        'category' => 'home-appliances',
-        'image' => 'microwave.jpeg'
-    ],
-
-    [
-        'name' => 'Vacuum Cleaner',
-        'brand' => 'Dyson',
-        'price' => 260,
-        'location' => 'Bedok',
-        'condition' => 'Like New',
-        'category' => 'home-appliances',
-        'image' => 'Vacuum_Cleaner.webp'
-    ],
-
-    [
-        'name' => 'Coffee Machine',
-        'brand' => 'Nespresso',
-        'price' => 110,
-        'location' => 'Queenstown',
-        'condition' => 'Like New',
-        'category' => 'home-appliances',
-        'image' => 'Coffee_Machine.webp'
-    ],
-
-
-    /* =========================
-       BOOKS
-    ========================= */
-
-    [
-        'name' => 'Harry Potter Book Set',
-        'brand' => 'Bloomsbury',
-        'price' => 45,
-        'location' => 'Bukit Timah',
-        'condition' => 'Good',
-        'category' => 'books',
-        'image' => 'Harry_Potter_Book_Set_Bloomsbury.jpeg'
-    ],
-
-    [
-        'name' => 'Atomic Habits',
-        'brand' => 'James Clear',
-        'price' => 12,
-        'location' => 'Clementi',
-        'condition' => 'Like New',
-        'category' => 'books',
-        'image' => 'Atomic_Habits_James_Clear.webp'
-    ],
-
-    [
-        'name' => 'Python Programming Book',
-        'brand' => 'O\'Reilly',
-        'price' => 25,
-        'location' => 'Jurong East',
-        'condition' => 'Good',
-        'category' => 'books',
-        'image' => 'Python_Programming_Book.jpeg'
-    ],
-
-    [
-        'name' => 'The Psychology of Money',
-        'brand' => 'Morgan Housel',
-        'price' => 15,
-        'location' => 'Orchard',
-        'condition' => 'Like New',
-        'category' => 'books',
-        'image' => 'The_Psychology_of_Money_.webp'
-    ],
-
-
-    /* =========================
-       FURNITURE
-    ========================= */
-
-    [
-        'name' => 'Wooden Study Desk',
-        'brand' => 'IKEA',
-        'price' => 90,
-        'location' => 'Woodlands',
-        'condition' => 'Good',
-        'category' => 'furniture',
-        'image' => 'Wooden_Desk.jpeg'
-    ],
-
-    [
-        'name' => 'Office Chair',
-        'brand' => 'IKEA',
-        'price' => 75,
-        'location' => 'Tampines',
-        'condition' => 'Good',
-        'category' => 'furniture',
-        'image' => 'Office_Chair.jpeg'
-    ],
-
-    [
-        'name' => 'Three Seater Sofa',
-        'brand' => 'Castlery',
-        'price' => 350,
-        'location' => 'Sengkang',
-        'condition' => 'Like New',
-        'category' => 'furniture',
-        'image' => '/Three_Seater_Sofa.jpg'
-    ],
-
-    [
-        'name' => 'Bedside Table',
-        'brand' => 'Muji',
-        'price' => 50,
-        'location' => 'Pasir Ris',
-        'condition' => 'Good',
-        'category' => 'furniture',
-        'image' => 'Bedside_Table.avif'
-    ],
-
-
-    /* =========================
-       OTHERS
-    ========================= */
-
-    [
-        'name' => 'Acoustic Guitar',
-        'brand' => 'Yamaha',
-        'price' => 140,
-        'location' => 'Bishan',
-        'condition' => 'Good',
-        'category' => 'others',
-        'image' => 'Acoustic_Guitar.webp'
-    ],
-
-    [
-        'name' => 'Digital Camera',
-        'brand' => 'Canon',
-        'price' => 290,
-        'location' => 'Orchard',
-        'condition' => 'Like New',
-        'category' => 'others',
-        'image' => 'Digital_Camera_Canon.jpeg'
-    ],
-
-    [
-        'name' => 'Travel Suitcase',
-        'brand' => 'Samsonite',
-        'price' => 80,
-        'location' => 'Changi',
-        'condition' => 'Good',
-        'category' => 'others',
-        'image' => 'Travel_Suitcase_Samsonite.jpg'
-    ],
-
-    [
-        'name' => 'Electric Guitar',
-        'brand' => 'Fender',
-        'price' => 380,
-        'location' => 'Bugis',
-        'condition' => 'Like New',
-        'category' => 'others',
-        'image' => 'Electric_Guitar_Fender.jpeg'
-    ]
-
-];
 
 
 /* =========================================================
@@ -953,89 +589,101 @@ elseif ($sort === 'price-high') {
 
         <div class="products-grid">
 
-
             <?php if (!empty($filtered_products)) : ?>
-
 
                 <?php foreach ($filtered_products as $product) : ?>
 
-
-					<article class="product-card">
-
-						<div class="product-image">
-
-							<?php if ($product['condition'] === 'Good') : ?>
-
-								<span class="condition-badge condition-good">
-									Good
-								</span>
-
-							<?php else : ?>
-
-								<span class="condition-badge condition-like-new">
-									Like New
-								</span>
-
-							<?php endif; ?>
+                    <article class="product-card">
+                        <button
+                                    class="favourite-button"
+                                    type="button"
+                                    aria-label="Save <?php echo esc_attr($product['name']); ?>"
+                                    data-product-id="<?php echo esc_attr($product['id']); ?>"
+                        >
+                                    ♡
+                        </button>
 
 
-							<button
-								class="favourite-button"
-								type="button"
-								aria-label="Save product"
-							>
-								♡
-							</button>
+                        <a
+                            class="product-card-link"
+                            href="<?php
+                            echo esc_url(
+                                home_url(
+                                    '/product-detail/?id='
+                                    . $product['id']
+                                )
+                            );
+                            ?>"
+                        >
+
+                            <div class="product-image">
+
+                                <?php if ($product['condition'] === 'Good') : ?>
+
+                                    <span class="condition-badge condition-good">
+                                        Good
+                                    </span>
+
+                                <?php else : ?>
+
+                                    <span class="condition-badge condition-like-new">
+                                        Like New
+                                    </span>
+
+                                <?php endif; ?>
 
 
-							<img
-								src="<?php
-								echo esc_url(
-									get_template_directory_uri()
-									. '/images/'
-									. $product['image']
-								);
-								?>"
-								alt="<?php echo esc_attr($product['name']); ?>"
-							>
+                                <img
+                                    src="<?php
+                                    echo esc_url(
+                                        get_template_directory_uri()
+                                        . '/images/'
+                                        . $product['image']
+                                    );
+                                    ?>"
+                                    alt="<?php echo esc_attr($product['name']); ?>"
+                                >
 
-						</div>
+                            </div>
 
 
-						<div class="product-content">
+                            <div class="product-content">
 
-							<h2>
-								<?php echo esc_html($product['name']); ?>
-							</h2>
+                                <h2>
+                                    <?php echo esc_html($product['name']); ?>
+                                </h2>
 
-							<p class="product-brand">
-								<?php echo esc_html($product['brand']); ?>
-							</p>
+                                <p class="product-brand">
+                                    <?php echo esc_html($product['brand']); ?>
+                                </p>
 
-							<p class="product-price">
-								$<?php echo number_format($product['price']); ?>
-							</p>
+                                <p class="product-price">
+                                    $<?php
+                                    echo esc_html(
+                                        number_format(
+                                            (float) $product['price']
+                                        )
+                                    );
+                                    ?>
+                                </p>
 
-							<p class="product-location">
-								⌖ <?php echo esc_html($product['location']); ?>
-							</p>
+                                <p class="product-location">
+                                    ⌖ <?php echo esc_html($product['location']); ?>
+                                </p>
 
-						</div>
+                            </div>
 
-					</article>
+                        </a>
 
+                    </article>
 
                 <?php endforeach; ?>
 
-
             <?php else : ?>
-
 
                 <div class="no-products">
 
-                    <h2>
-                        No products found
-                    </h2>
+                    <h2>No products found</h2>
 
                     <p>
                         Try another category or search term.
@@ -1043,9 +691,7 @@ elseif ($sort === 'price-high') {
 
                 </div>
 
-
             <?php endif; ?>
-
 
         </div>
 
@@ -1071,6 +717,31 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 
 	}
+
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const favouriteButton =
+        document.querySelector('.detail-favourite-button');
+
+    if (!favouriteButton) {
+        return;
+    }
+
+    favouriteButton.addEventListener('click', function () {
+
+        this.classList.toggle('saved');
+
+        if (this.classList.contains('saved')) {
+            this.innerHTML = '♥ Saved';
+        } else {
+            this.innerHTML = '♡ Save';
+        }
+
+    });
 
 });
 </script>

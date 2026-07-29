@@ -1464,6 +1464,8 @@ a:active {
 	padding: 0;
 }
 
+/* Product card */ 
+
 .loopbuy-home .product-card,
 .loopbuy-home .listing-card,
 .loopbuy-home .loopbuy-product-card,
@@ -1477,6 +1479,27 @@ a:active {
 	overflow: hidden;
 	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 	transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+/* Product card link */
+.loopbuy-home .product-card-link {
+	display: block;
+	color: inherit;
+	text-decoration: none;
+}
+
+.loopbuy-home .product-card-link:hover {
+	color: inherit;
+	text-decoration: none;
+}
+
+
+/* Favourite button */
+.loopbuy-home .favourite-button {
+	position: absolute;
+	top: 12px;
+	right: 12px;
+	z-index: 10;
 }
 
 .loopbuy-home .product-card:hover,
@@ -1530,6 +1553,8 @@ a:active {
 	font-weight: 750;
 	color: var(--loopbuy-text);
 }
+
+
 
 .loopbuy-home .product-brand,
 .loopbuy-home .product-meta,
@@ -1628,40 +1653,295 @@ a:active {
    FAVOURITE BUTTON
 ========================================== */
 
-.loopbuy-home .product-image .favourite-button {
+.loopbuy-home .product-card .favourite-button {
 	position: absolute;
-
 	top: 12px;
 	right: 12px;
-
 	width: 38px;
 	height: 38px;
-
 	display: flex;
 	align-items: center;
 	justify-content: center;
-
 	padding: 0;
 	margin: 0;
-
 	border: 1px solid #e5e7eb;
 	border-radius: 50%;
-
 	background: rgba(255, 255, 255, 0.95);
 	color: #6b7280;
-
 	font-size: 21px;
-
 	cursor: pointer;
-
-	z-index: 10;
+	z-index: 20;
 }
 
-.loopbuy-home .product-image .favourite-button:hover {
+.loopbuy-home .product-card .favourite-button:hover,
+.loopbuy-home .product-card .favourite-button.active {
 	background: #ffffff;
-	color: #d84b5b;
+	color: #ef4444;
+	border-color: #fecaca;
 }
 
+/* ==========================================
+   PRODUCT DETAIL PAGE
+========================================== */
+
+.loopbuy-product-page {
+    background: #ffffff;
+    min-height: 100vh;
+}
+
+.loopbuy-product-page .product-detail-container {
+    width: min(1180px, calc(100% - 40px));
+    margin: 0 auto;
+    padding: 32px 0 60px;
+}
+
+.loopbuy-product-page .product-back {
+    display: inline-block;
+    margin-bottom: 22px;
+    color: #666;
+    text-decoration: none;
+    font-size: 15px;
+}
+
+.loopbuy-product-page .product-detail-main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 34px;
+    align-items: start;
+}
+
+
+/* IMAGE */
+
+.loopbuy-product-page .product-detail-image {
+    height: 520px;
+    border-radius: 18px;
+    overflow: hidden;
+    background: #f5f5f5;
+}
+
+.loopbuy-product-page .product-detail-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+
+/* PRODUCT INFO */
+
+.loopbuy-product-page .product-detail-info {
+    padding: 5px 0;
+}
+
+.loopbuy-product-page .product-badges {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.loopbuy-product-page .product-condition {
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: #fff4d9;
+    color: #c87800;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.loopbuy-product-page .product-verified {
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: #eef2f8;
+    color: #62718a;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.loopbuy-product-page h1 {
+    margin: 0;
+    font-size: 32px;
+    line-height: 1.15;
+}
+
+.loopbuy-product-page .product-brand {
+    margin: 5px 0 14px;
+    color: #777;
+}
+
+.loopbuy-product-page .product-views {
+    color: #777;
+    font-size: 14px;
+}
+
+.loopbuy-product-page .product-detail-price {
+    margin: 22px 0 10px;
+    font-size: 34px;
+    font-weight: 800;
+    color: #62718d;
+}
+
+.loopbuy-product-page .product-location {
+    color: #666;
+}
+
+.loopbuy-product-page .product-description {
+    margin-top: 22px;
+    line-height: 1.7;
+    color: #555;
+}
+
+
+/* SELLER */
+
+.loopbuy-product-page .product-seller-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 22px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 14px;
+}
+
+.loopbuy-product-page .seller-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #687795;
+}
+
+.loopbuy-product-page .product-seller-card p {
+    margin: 3px 0 0;
+    color: #777;
+    font-size: 13px;
+}
+
+
+/* SAFETY */
+
+.loopbuy-product-page .product-safe-box {
+    margin-top: 18px;
+    padding: 16px;
+    border: 1px solid #b9c7dc;
+    border-radius: 12px;
+    background: #edf2fa;
+    color: #5e6d87;
+}
+
+
+/* ACTION BUTTONS */
+
+.loopbuy-product-page .product-actions {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.loopbuy-product-page .product-actions button {
+    height: 48px;
+    border-radius: 11px;
+    border: 1px solid #ddd;
+    background: white;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.loopbuy-product-page .product-actions .add-cart-button {
+    border: none;
+    background: #687795;
+    color: white;
+}
+
+.loopbuy-product-page .detail-favourite-button.saved {
+    color: #e53935;
+}
+
+.loopbuy-product-page .chat-button:hover,
+.loopbuy-product-page .detail-favourite-button:hover {
+    background: #f6f6f6;
+}
+
+
+/* REVIEWS */
+
+.loopbuy-product-page .product-review-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 35px;
+    margin-top: 45px;
+}
+
+.loopbuy-product-page .review-column h2 {
+    font-size: 20px;
+    margin-bottom: 18px;
+}
+
+.loopbuy-product-page .review-box {
+    padding: 18px;
+    border: 1px solid #ddd;
+    border-radius: 16px;
+}
+
+.loopbuy-product-page .review-stars {
+    margin-bottom: 12px;
+    color: #ffb400;
+    font-size: 28px;
+    letter-spacing: 4px;
+}
+
+.loopbuy-product-page .review-box textarea {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 90px;
+    padding: 14px;
+    resize: vertical;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    font-family: inherit;
+}
+
+.loopbuy-product-page .review-box button {
+    margin-top: 14px;
+    padding: 11px 18px;
+    border: none;
+    border-radius: 8px;
+    background: #111;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.loopbuy-product-page .no-review {
+    margin-top: 14px;
+    color: #777;
+}
+
+
+/* MOBILE */
+
+@media (max-width: 800px) {
+
+    .loopbuy-product-page .product-detail-main {
+        grid-template-columns: 1fr;
+    }
+
+    .loopbuy-product-page .product-review-section {
+        grid-template-columns: 1fr;
+    }
+
+    .loopbuy-product-page .product-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .loopbuy-product-page .product-detail-image {
+        height: 400px;
+    }
+}
 /* ==========================================
    3. CONTENT PAGES / SHARED WORDPRESS CONTENT
 ========================================== */
