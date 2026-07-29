@@ -182,6 +182,7 @@ if (!$product) {
                     <button
                         class="add-cart-button"
                         type="button"
+                        data-product-id="<?php echo esc_attr($product['id']); ?>"
                     >
                         🛍 Add to Cart
                     </button>
@@ -272,8 +273,75 @@ if (!$product) {
 
 </main>
 
+<script>
+/* =========================================================
+   ADD TO CART
+   Persists to the same localStorage cart map that
+   page-cart.php reads from: { productId: quantity }
+========================================================= */
+document.addEventListener('DOMContentLoaded', function () {
+
+	var STORAGE_KEY = 'loopbuy_cart_items';
+
+	var addToCartButton = document.querySelector('.add-cart-button');
+
+	if (!addToCartButton) {
+		return;
+	}
+
+	function getCart() {
+		try {
+			var raw = window.localStorage.getItem(STORAGE_KEY);
+			var cart = raw ? JSON.parse(raw) : {};
+			return (cart && typeof cart === 'object' && !Array.isArray(cart)) ? cart : {};
+		} catch (e) {
+			return {};
+		}
+	}
+
+	function setCart(cart) {
+		try {
+			window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
+		} catch (e) {}
+	}
+
+	function updateCartCountBadge(count) {
+		var badge = document.querySelector('[data-cart-count]');
+		if (badge) {
+			badge.textContent = count;
+			badge.hidden = count === 0;
+		}
+	}
+
+	function cartTotalQuantity(cart) {
+		return Object.keys(cart).reduce(function (sum, id) {
+			return sum + (parseInt(cart[id], 10) || 0);
+		}, 0);
+	}
+
+	updateCartCountBadge(cartTotalQuantity(getCart()));
+
+	addToCartButton.addEventListener('click', function () {
+		var id = addToCartButton.getAttribute('data-product-id');
+		var cart = getCart();
+
+		cart[id] = (cart[id] || 0) + 1;
+		setCart(cart);
+		updateCartCountBadge(cartTotalQuantity(cart));
+
+		var originalText = addToCartButton.innerHTML;
+		addToCartButton.innerHTML = '✓ Added to Cart';
+		addToCartButton.disabled = true;
+
+		setTimeout(function () {
+			addToCartButton.innerHTML = originalText;
+			addToCartButton.disabled = false;
+		}, 1200);
+	});
+
+});
+</script>
 
 <?php
 get_footer(); 
 ?>
-

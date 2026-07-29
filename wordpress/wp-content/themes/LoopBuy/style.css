@@ -3016,6 +3016,292 @@ body.dark-mode .theme-toggle,
 }
 
 /* ==========================================
+   12b. CART PAGE
+   Required wrapper: <main class="loopbuy-cart-page">
+========================================== */
+
+.cart-page-container {
+	width: min(calc(100% - 40px), var(--loopbuy-container));
+	margin: 0 auto;
+	padding: 40px 0 60px;
+}
+
+.cart-page-heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 28px;
+}
+
+.cart-page-heading h1 {
+	margin: 0;
+	font-size: clamp(1.6rem, 3vw, 2rem);
+	font-weight: 800;
+	letter-spacing: -0.03em;
+	color: var(--loopbuy-text);
+}
+
+.cart-clear-all {
+	color: var(--loopbuy-muted);
+	font-weight: 600;
+	font-size: 0.95rem;
+	text-decoration: none;
+}
+
+.cart-clear-all:hover,
+.cart-clear-all:focus-visible {
+	color: var(--loopbuy-text);
+	text-decoration: underline;
+}
+
+/* Ensure the [hidden] attribute always wins over the display:flex
+   rules below, regardless of source order/specificity ties. */
+.cart-empty-message[hidden],
+.cart-items[hidden],
+.cart-summary[hidden] {
+	display: none;
+}
+
+/* Empty state */
+.cart-empty-message {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	border: 1.5px dashed var(--loopbuy-border);
+	border-radius: var(--loopbuy-radius);
+	padding: clamp(56px, 10vw, 100px) 24px;
+	margin-bottom: 48px;
+}
+
+.cart-empty-icon {
+	color: #c7cbd4;
+	margin-bottom: 22px;
+}
+
+.cart-empty-title {
+	margin: 0 0 8px;
+	font-size: 1.2rem;
+	font-weight: 800;
+	color: var(--loopbuy-text);
+}
+
+.cart-empty-text {
+	margin: 0 0 26px;
+	color: var(--loopbuy-muted);
+	font-size: 0.98rem;
+}
+
+.cart-browse-button {
+	display: inline-flex;
+	align-items: center;
+	border: 0;
+	border-radius: 12px;
+	background: var(--loopbuy-primary);
+	color: #fff !important;
+	padding: 13px 26px;
+	font-weight: 700;
+	transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.cart-browse-button:hover,
+.cart-browse-button:focus-visible {
+	background: var(--loopbuy-primary-dark);
+	color: #fff;
+	transform: translateY(-1px);
+}
+
+/* Cart item rows */
+.cart-items {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	margin-bottom: 24px;
+}
+
+.cart-item {
+	position: relative;
+	display: flex;
+	gap: 20px;
+	align-items: flex-start;
+	background: #fff;
+	border: 1px solid var(--loopbuy-border);
+	border-radius: var(--loopbuy-radius);
+	padding: 20px;
+}
+
+.cart-item-image {
+	flex: 0 0 auto;
+	width: 100px;
+	height: 100px;
+	border-radius: 12px;
+	overflow: hidden;
+	background: #f4f4f4;
+}
+
+.cart-item-image img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.cart-item-content {
+	flex: 1 1 auto;
+	min-width: 0;
+	padding-right: 90px;
+}
+
+.cart-item-content h2 {
+	margin: 0 0 2px;
+	font-size: 1.05rem;
+	font-weight: 750;
+	color: var(--loopbuy-text);
+}
+
+.cart-item-brand {
+	margin: 0 0 8px;
+	color: var(--loopbuy-muted);
+	font-size: 0.9rem;
+}
+
+.cart-item-price {
+	margin: 0 0 14px;
+	color: var(--loopbuy-primary-dark);
+	font-size: 1.2rem;
+	font-weight: 800;
+}
+
+.cart-qty-control {
+	display: inline-flex;
+	align-items: center;
+	gap: 14px;
+	border: 1px solid var(--loopbuy-border);
+	border-radius: 10px;
+	padding: 6px 10px;
+}
+
+.cart-qty-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	border: 0;
+	border-radius: 7px;
+	background: transparent;
+	color: var(--loopbuy-text);
+	font-size: 1.05rem;
+	font-weight: 700;
+	cursor: pointer;
+	padding: 0;
+	line-height: 1;
+}
+
+.cart-qty-btn:hover,
+.cart-qty-btn:focus-visible {
+	background: var(--loopbuy-soft);
+}
+
+.cart-qty-value {
+	min-width: 18px;
+	text-align: center;
+	font-weight: 700;
+	color: var(--loopbuy-text);
+}
+
+.cart-remove-button {
+	position: absolute;
+	top: 20px;
+	right: 20px;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	border: 0;
+	background: transparent;
+	color: var(--loopbuy-muted);
+	font-weight: 600;
+	font-size: 0.92rem;
+	cursor: pointer;
+	padding: 4px;
+}
+
+.cart-remove-button:hover,
+.cart-remove-button:focus-visible {
+	color: #d84b5b;
+}
+
+.cart-remove-button svg {
+	flex: 0 0 auto;
+}
+
+/* Summary */
+.cart-summary {
+	border: 1px solid var(--loopbuy-border);
+	border-radius: var(--loopbuy-radius);
+	background: var(--loopbuy-surface, #fff);
+	padding: clamp(20px, 3vw, 28px);
+}
+
+.cart-summary-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 20px;
+}
+
+.cart-summary-label {
+	font-size: 1.15rem;
+	font-weight: 800;
+	color: var(--loopbuy-text);
+}
+
+.cart-summary-total {
+	font-size: 1.5rem;
+	font-weight: 800;
+	color: var(--loopbuy-primary-dark);
+}
+
+.cart-checkout-button {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	width: 100%;
+	border: 0;
+	border-radius: 12px;
+	background: var(--loopbuy-primary);
+	color: #fff;
+	padding: 15px;
+	font-weight: 700;
+	font-size: 1rem;
+	cursor: pointer;
+	transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.cart-checkout-button:hover,
+.cart-checkout-button:focus-visible {
+	background: var(--loopbuy-primary-dark);
+	transform: translateY(-1px);
+}
+
+@media (max-width: 620px) {
+	.cart-item {
+		flex-wrap: wrap;
+	}
+
+	.cart-item-content {
+		padding-right: 0;
+	}
+
+	.cart-remove-button {
+		position: static;
+		margin-top: 10px;
+	}
+}
+
+/* ==========================================
    13. ABOUT PAGE
    Required wrapper: <div class="page loopbuy-about">
 ========================================== */
