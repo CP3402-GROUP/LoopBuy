@@ -25,6 +25,19 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="profile" href="https://gmpg.org/xfn/11">
 
+	<script>
+	// Apply the saved theme before first paint so there's no flash of the
+	// wrong mode when navigating between pages.
+	( function () {
+		try {
+			var saved = window.localStorage.getItem( 'loopbuy_theme' );
+			if ( saved === 'dark' ) {
+				document.documentElement.classList.add( 'dark-mode' );
+			}
+		} catch ( e ) {}
+	} )();
+	</script>
+
 	<?php wp_head(); ?>
 </head>
 
@@ -188,6 +201,44 @@
 				<?php endif; ?>
 
 			</div><!-- .header-actions -->
+
+			<script>
+			/* =========================================================
+			   DARK MODE TOGGLE
+			========================================================= */
+			( function () {
+
+				var THEME_KEY = 'loopbuy_theme';
+				var toggle    = document.getElementById( 'loopbuy-theme-toggle' );
+				var root      = document.documentElement;
+
+				if ( ! toggle ) {
+					return;
+				}
+
+				function isDark() {
+					return root.classList.contains( 'dark-mode' );
+				}
+
+				function syncPressedState() {
+					toggle.setAttribute( 'aria-pressed', isDark() ? 'true' : 'false' );
+				}
+
+				// The <head> script already applied the class before paint
+				// if the saved preference was dark — just sync the button.
+				syncPressedState();
+
+				toggle.addEventListener( 'click', function () {
+					root.classList.toggle( 'dark-mode' );
+					syncPressedState();
+
+					try {
+						window.localStorage.setItem( THEME_KEY, isDark() ? 'dark' : 'light' );
+					} catch ( e ) {}
+				} );
+
+			} )();
+			</script>
 
 			<script>
 			/* =========================================================

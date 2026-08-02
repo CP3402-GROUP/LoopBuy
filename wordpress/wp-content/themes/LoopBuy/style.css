@@ -474,7 +474,7 @@ big {
 /* Elements
 --------------------------------------------- */
 body {
-	background: #fff;
+	background: var(--loopbuy-surface);
 }
 
 hr {
@@ -991,9 +991,27 @@ textarea {
 	--loopbuy-border: #e5e7eb;
 	--loopbuy-surface: #ffffff;
 	--loopbuy-soft: #f7f8fa;
+	--loopbuy-header-bg: rgba(255, 255, 255, 0.96);
 	--loopbuy-radius: 18px;
 	--loopbuy-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
 	--loopbuy-container: 1280px;
+}
+
+html.dark-mode {
+	--loopbuy-primary: #8b9dc3;
+	--loopbuy-primary-dark: #aebbdb;
+	--loopbuy-teal: #2dd4c7;
+	--loopbuy-text: #eef0f3;
+	--loopbuy-muted: #9aa0ac;
+	--loopbuy-border: #2b2e36;
+	--loopbuy-surface: #1a1c22;
+	--loopbuy-soft: #22252c;
+	--loopbuy-header-bg: rgba(15, 16, 20, 0.92);
+	--loopbuy-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+html.dark-mode body {
+	background: #101114;
 }
 
 html {
@@ -1045,7 +1063,7 @@ a:active {
 	position: sticky;
 	top: 0;
 	z-index: 1000;
-	background: rgba(255, 255, 255, 0.96);
+	background: var(--loopbuy-header-bg);
 	border-bottom: 1px solid var(--loopbuy-border);
 	backdrop-filter: blur(14px);
 	-webkit-backdrop-filter: blur(14px);
@@ -1112,7 +1130,7 @@ a:active {
 	padding: 0 18px 0 44px;
 	border: 1px solid var(--loopbuy-border);
 	border-radius: 999px;
-	background: #fbfbfc;
+	background: var(--loopbuy-soft);
 	color: var(--loopbuy-text);
 	outline: none;
 	transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
@@ -1127,7 +1145,7 @@ a:active {
 	top: 50%;
 	transform: translateY(-53%);
 	font-size: 1.35rem;
-	color: #8a909b;
+	color: var(--loopbuy-muted);
 	z-index: 2;
 	pointer-events: none;
 }
@@ -1135,7 +1153,7 @@ a:active {
 .search-form .search-field:focus,
 .header-search input:focus,
 .site-search input:focus {
-	background: #fff;
+	background: var(--loopbuy-surface);
 	border-color: var(--loopbuy-primary);
 	box-shadow: 0 0 0 4px rgba(102, 119, 146, 0.14);
 }
@@ -1277,7 +1295,7 @@ a:active {
 	border: 0;
 	border-radius: 999px;
 	padding: 0 20px;
-	background: #fff;
+	background: var(--loopbuy-surface);
 	color: var(--loopbuy-text);
 }
 
@@ -1317,8 +1335,8 @@ a:active {
 	padding: 8px 17px;
 	border: 1px solid var(--loopbuy-border);
 	border-radius: 999px;
-	background: #fff;
-	color: #5e6470;
+	background: var(--loopbuy-surface);
+	color: var(--loopbuy-muted);
 	font-weight: 600;
 	transition: all 0.2s ease;
 }
@@ -1358,7 +1376,7 @@ a:active {
 	height: 40px;
 	border: 1px solid var(--loopbuy-border);
 	border-radius: 10px;
-	background: #fff;
+	background: var(--loopbuy-surface);
 	color: var(--loopbuy-text);
 	padding: 0 14px;
 }
@@ -1373,7 +1391,7 @@ a:active {
 	padding: 18px;
 	border: 1px solid var(--loopbuy-border);
 	border-radius: 18px;
-	background: #fff;
+	background: var(--loopbuy-surface);
 }
 
 .loopbuy-home .product-filter-panel.show {
@@ -1402,7 +1420,7 @@ a:active {
 	padding: 0 13px;
 	border: 1px solid var(--loopbuy-border);
 	border-radius: 9px;
-	background: #fff;
+	background: var(--loopbuy-surface);
 	color: var(--loopbuy-text);
 	font-size: 0.875rem;
 }
@@ -1441,7 +1459,7 @@ a:active {
 
 .loopbuy-home .clear-filter-button {
 	border: 1px solid var(--loopbuy-border);
-	background: #fff;
+	background: var(--loopbuy-surface);
 	color: #555;
 	text-decoration: none;
 }
@@ -1473,7 +1491,7 @@ a:active {
 	position: relative;
 	margin: 0 !important;
 	width: 100% !important;
-	background: #fff;
+	background: var(--loopbuy-surface);
 	border: 1px solid var(--loopbuy-border);
 	border-radius: var(--loopbuy-radius);
 	overflow: hidden;
@@ -1520,7 +1538,7 @@ a:active {
 	aspect-ratio: 1 / 1;
 	object-fit: cover;
 	margin: 0 !important;
-	background: #f2f3f5;
+	background: var(--loopbuy-soft);
 }
 
 .loopbuy-home .product-card__body,
@@ -1582,7 +1600,7 @@ a:active {
 .loopbuy-home .product-image {
 	position: relative;
 	overflow: hidden;
-	background: #f4f4f4;
+	background: var(--loopbuy-soft);
 }
 
 
@@ -1675,7 +1693,7 @@ a:active {
 
 .loopbuy-home .product-card .favourite-button:hover,
 .loopbuy-home .product-card .favourite-button.active {
-	background: #ffffff;
+	background: var(--loopbuy-surface);
 	color: #ef4444;
 	border-color: #fecaca;
 }
@@ -1685,7 +1703,7 @@ a:active {
 ========================================== */
 
 .loopbuy-product-page {
-    background: #ffffff;
+    background: var(--loopbuy-surface);
     min-height: 100vh;
 }
 
@@ -1799,7 +1817,7 @@ a:active {
     gap: 14px;
     margin-top: 22px;
     padding: 15px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--loopbuy-border);
     border-radius: 14px;
 }
 
@@ -1844,8 +1862,8 @@ a:active {
 .loopbuy-product-page .product-actions button {
     height: 48px;
     border-radius: 11px;
-    border: 1px solid #ddd;
-    background: white;
+    border: 1px solid var(--loopbuy-border);
+    background: var(--loopbuy-surface);
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
@@ -1883,7 +1901,7 @@ a:active {
 
 .loopbuy-product-page .review-box {
     padding: 18px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--loopbuy-border);
     border-radius: 16px;
 }
 
@@ -1900,7 +1918,7 @@ a:active {
     min-height: 90px;
     padding: 14px;
     resize: vertical;
-    border: 1px solid #ddd;
+    border: 1px solid var(--loopbuy-border);
     border-radius: 10px;
     font-family: inherit;
 }
@@ -1976,7 +1994,7 @@ textarea {
 	border: 1px solid var(--loopbuy-border);
 	border-radius: 10px;
 	padding: 11px 13px;
-	background: #fff;
+	background: var(--loopbuy-surface);
 	color: var(--loopbuy-text);
 }
 
@@ -2049,7 +2067,7 @@ Add product-page-only styles with selectors such as:
 .site-footer {
 	margin-top: 56px;
 	border-top: 1px solid var(--loopbuy-border);
-	background: #fff;
+	background: var(--loopbuy-surface);
 }
 
 .site-footer .site-footer-inner,
@@ -2290,7 +2308,7 @@ Add product-page-only styles with selectors such as:
 	transform: translateY(-1px);
 }
 
-body.dark-mode .theme-toggle,
+html.dark-mode .theme-toggle,
 .theme-toggle[aria-pressed="true"] {
 	background: var(--loopbuy-text);
 	border-color: var(--loopbuy-text);
@@ -2651,7 +2669,7 @@ body.dark-mode .theme-toggle,
 	margin: 0 auto 48px;
 	border: 1px solid var(--loopbuy-border);
 	border-radius: var(--loopbuy-radius);
-	background: #fff;
+	background: var(--loopbuy-surface);
 	box-shadow: var(--loopbuy-shadow);
 	padding: clamp(20px, 4vw, 32px);
 	text-align: left;
@@ -2678,7 +2696,7 @@ body.dark-mode .theme-toggle,
 	padding: 13px 15px;
 	border: 1px solid var(--loopbuy-border);
 	border-radius: 12px;
-	background: #fbfbfc;
+	background: var(--loopbuy-soft);
 	color: var(--loopbuy-text);
 	font-family: inherit;
 	font-size: 0.95rem;
@@ -2699,7 +2717,7 @@ body.dark-mode .theme-toggle,
 .loopbuy-sell-field input:focus,
 .loopbuy-sell-field textarea:focus,
 .loopbuy-sell-field select:focus {
-	background: #fff;
+	background: var(--loopbuy-surface);
 	border-color: var(--loopbuy-primary);
 	box-shadow: 0 0 0 4px rgba(102, 119, 146, 0.14);
 }
@@ -2737,7 +2755,7 @@ body.dark-mode .theme-toggle,
 .loopbuy-photo-upload:focus-within {
 	border-color: var(--loopbuy-primary);
 	color: var(--loopbuy-primary);
-	background: #fff;
+	background: var(--loopbuy-surface);
 }
 
 .loopbuy-ai-panel {
@@ -2772,7 +2790,7 @@ body.dark-mode .theme-toggle,
 	gap: 7px;
 	border: 1px solid var(--loopbuy-border);
 	border-radius: 10px;
-	background: #fff;
+	background: var(--loopbuy-surface);
 	color: var(--loopbuy-text);
 	padding: 10px 16px;
 	font-weight: 600;
@@ -2918,7 +2936,7 @@ body.dark-mode .theme-toggle,
 
 .saved-product-card {
 	position: relative;
-	background: #fff;
+	background: var(--loopbuy-surface);
 	border: 1px solid var(--loopbuy-border);
 	border-radius: var(--loopbuy-radius);
 	overflow: hidden;
@@ -2935,7 +2953,7 @@ body.dark-mode .theme-toggle,
 .saved-product-image {
 	position: relative;
 	overflow: hidden;
-	background: #f4f4f4;
+	background: var(--loopbuy-soft);
 }
 
 .saved-product-image img {
@@ -2992,7 +3010,7 @@ body.dark-mode .theme-toggle,
 
 .saved-product-image .favourite-button:hover,
 .saved-product-image .favourite-button.active {
-	background: #ffffff;
+	background: var(--loopbuy-surface);
 	color: #ef4444;
 	border-color: #fecaca;
 }
@@ -3169,7 +3187,7 @@ body.dark-mode .theme-toggle,
 	display: flex;
 	gap: 20px;
 	align-items: flex-start;
-	background: #fff;
+	background: var(--loopbuy-surface);
 	border: 1px solid var(--loopbuy-border);
 	border-radius: var(--loopbuy-radius);
 	padding: 20px;
@@ -3181,7 +3199,7 @@ body.dark-mode .theme-toggle,
 	height: 100px;
 	border-radius: 12px;
 	overflow: hidden;
-	background: #f4f4f4;
+	background: var(--loopbuy-soft);
 }
 
 .cart-item-image img {
@@ -3459,7 +3477,7 @@ body.dark-mode .theme-toggle,
 	align-items: center;
 	border: 0;
 	border-radius: 12px;
-	background: #fff;
+	background: var(--loopbuy-surface);
 	color: var(--loopbuy-text) !important;
 	padding: 14px 30px;
 	font-weight: 700;
@@ -3589,7 +3607,7 @@ body.dark-mode .theme-toggle,
 	padding: 13px 15px;
 	border: 1px solid var(--loopbuy-border);
 	border-radius: 12px;
-	background: #fbfbfc;
+	background: var(--loopbuy-soft);
 	color: var(--loopbuy-text);
 	font-family: inherit;
 	font-size: 0.95rem;
@@ -3609,7 +3627,7 @@ body.dark-mode .theme-toggle,
 
 .loopbuy-contact-field input:focus,
 .loopbuy-contact-field textarea:focus {
-	background: #fff;
+	background: var(--loopbuy-surface);
 	border-color: var(--loopbuy-primary);
 	box-shadow: 0 0 0 4px rgba(102, 119, 146, 0.14);
 }
@@ -3867,7 +3885,7 @@ body.dark-mode .theme-toggle,
 	padding: 12px 14px;
 	border: 1px solid var(--loopbuy-border);
 	border-radius: 12px;
-	background: #fbfbfc;
+	background: var(--loopbuy-soft);
 	color: var(--loopbuy-text);
 	font-family: inherit;
 	font-size: 0.95rem;
@@ -3882,7 +3900,7 @@ body.dark-mode .theme-toggle,
 
 .loopbuy-profile-field input:focus,
 .loopbuy-profile-field textarea:focus {
-	background: #fff;
+	background: var(--loopbuy-surface);
 	border-color: var(--loopbuy-primary);
 	box-shadow: 0 0 0 4px rgba(102, 119, 146, 0.14);
 }
@@ -3963,7 +3981,7 @@ body.dark-mode .theme-toggle,
 	height: 64px;
 	border-radius: 10px;
 	overflow: hidden;
-	background: #f4f4f4;
+	background: var(--loopbuy-soft);
 }
 
 .loopbuy-profile-listing-image img {
@@ -3977,7 +3995,7 @@ body.dark-mode .theme-toggle,
 	display: block;
 	width: 100%;
 	height: 100%;
-	background: #f4f4f4;
+	background: var(--loopbuy-soft);
 }
 
 .loopbuy-profile-listing-info {
@@ -4154,7 +4172,7 @@ body.dark-mode .theme-toggle,
 	display: flex;
 	align-items: center;
 	gap: 20px;
-	background: #fff;
+	background: var(--loopbuy-surface);
 	border: 1px solid var(--loopbuy-border);
 	border-radius: var(--loopbuy-radius);
 	padding: 20px;
@@ -4167,7 +4185,7 @@ body.dark-mode .theme-toggle,
 	height: 90px;
 	border-radius: 12px;
 	overflow: hidden;
-	background: #f4f4f4;
+	background: var(--loopbuy-soft);
 }
 
 .loopbuy-mylistings-item-image img {
@@ -4181,7 +4199,7 @@ body.dark-mode .theme-toggle,
 	display: block;
 	width: 100%;
 	height: 100%;
-	background: #f4f4f4;
+	background: var(--loopbuy-soft);
 }
 
 .loopbuy-mylistings-item-content {
@@ -4277,7 +4295,7 @@ body.dark-mode .theme-toggle,
 	gap: 7px;
 	border: 1px solid var(--loopbuy-border);
 	border-radius: 10px;
-	background: #fff;
+	background: var(--loopbuy-surface);
 	color: var(--loopbuy-text);
 	padding: 10px 16px;
 	font-weight: 600;
@@ -4303,7 +4321,7 @@ body.dark-mode .theme-toggle,
 	height: 38px;
 	border: 1px solid var(--loopbuy-border);
 	border-radius: 10px;
-	background: #fff;
+	background: var(--loopbuy-surface);
 	color: #d84b5b;
 	cursor: pointer;
 	padding: 0;
