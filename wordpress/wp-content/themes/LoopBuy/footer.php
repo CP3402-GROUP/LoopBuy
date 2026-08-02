@@ -19,6 +19,15 @@ $loopbuy_about_url    = $loopbuy_about_page ? get_permalink( $loopbuy_about_page
 $loopbuy_contact_page = get_page_by_path( 'contact' );
 $loopbuy_contact_url  = $loopbuy_contact_page ? get_permalink( $loopbuy_contact_page ) : home_url( '/contact/' );
 
+$loopbuy_sell_page        = get_page_by_path( 'sell' );
+$loopbuy_sell_url         = $loopbuy_sell_page ? get_permalink( $loopbuy_sell_page ) : home_url( '/sell/' );
+$loopbuy_saved_page       = get_page_by_path( 'saved' );
+$loopbuy_saved_url        = $loopbuy_saved_page ? get_permalink( $loopbuy_saved_page ) : home_url( '/saved/' );
+$loopbuy_cart_page        = get_page_by_path( 'cart' );
+$loopbuy_cart_url         = $loopbuy_cart_page ? get_permalink( $loopbuy_cart_page ) : home_url( '/cart/' );
+$loopbuy_my_listings_page = get_page_by_path( 'my-listings' );
+$loopbuy_my_listings_url  = $loopbuy_my_listings_page ? get_permalink( $loopbuy_my_listings_page ) : home_url( '/my-listings/' );
+
 ?>
 
 	<footer id="colophon" class="site-footer">
@@ -56,10 +65,10 @@ $loopbuy_contact_url  = $loopbuy_contact_page ? get_permalink( $loopbuy_contact_
 					<?php dynamic_sidebar( 'footer-marketplace' ); ?>
 				<?php else : ?>
 					<ul>
-						<li><a href="#"><?php esc_html_e( 'Browse', 'loopbuy' ); ?></a></li>
-						<li><a href="#"><?php esc_html_e( 'Sell', 'loopbuy' ); ?></a></li>
-						<li><a href="#"><?php esc_html_e( 'Saved', 'loopbuy' ); ?></a></li>
-						<li><a href="#"><?php esc_html_e( 'Cart', 'loopbuy' ); ?></a></li>
+						<li><a href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php esc_html_e( 'Browse', 'loopbuy' ); ?></a></li>
+						<li><a href="<?php echo esc_url( $loopbuy_sell_url ); ?>"><?php esc_html_e( 'Sell', 'loopbuy' ); ?></a></li>
+						<li><a href="<?php echo esc_url( $loopbuy_saved_url ); ?>"><?php esc_html_e( 'Saved', 'loopbuy' ); ?></a></li>
+						<li><a href="<?php echo esc_url( $loopbuy_cart_url ); ?>"><?php esc_html_e( 'Cart', 'loopbuy' ); ?></a></li>
 					</ul>
 				<?php endif; ?>
 			</div>
@@ -72,7 +81,7 @@ $loopbuy_contact_url  = $loopbuy_contact_page ? get_permalink( $loopbuy_contact_
 					<ul>
 						<li><a href="<?php echo esc_url( $loopbuy_about_url ); ?>"><?php esc_html_e( 'About', 'loopbuy' ); ?></a></li>
 						<li><a href="<?php echo esc_url( $loopbuy_contact_url ); ?>"><?php esc_html_e( 'Contact', 'loopbuy' ); ?></a></li>
-						<li><a href="#"><?php esc_html_e( 'My Listings', 'loopbuy' ); ?></a></li>
+						<li><a href="<?php echo esc_url( $loopbuy_my_listings_url ); ?>"><?php esc_html_e( 'My Listings', 'loopbuy' ); ?></a></li>
 						<li><a href="#"><?php esc_html_e( 'Orders', 'loopbuy' ); ?></a></li>
 					</ul>
 				<?php endif; ?>
