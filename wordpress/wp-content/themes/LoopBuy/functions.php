@@ -187,3 +187,13 @@ if ( defined( 'JETPACK__VERSION' ) ) {
 	require get_template_directory() . '/inc/jetpack.php';
 }
 
+add_action( 'init', function () {
+	register_post_type( 'loopbuy_listing', array(
+		'labels'      => array( 'name' => 'Listings', 'singular_name' => 'Listing' ),
+		'public'      => true,
+		'show_ui'     => true,
+		'supports'    => array( 'title', 'editor', 'thumbnail', 'author' ),
+		'has_archive' => false,
+		'rewrite'     => array( 'slug' => 'listing' ),
+	) );
+} );

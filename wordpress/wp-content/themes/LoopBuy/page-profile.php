@@ -7,18 +7,18 @@
  * (page-profile.php), or it can be assigned manually via the
  * Page Attributes panel.
  *
- * NOTE: "My Listings" and the listings count query a post type via the
- * 'loopbuy_listing_post_type' filter (defaults to 'post'). If listings
- * in this site are a custom post type (e.g. 'listing'), add to
- * functions.php:
- *   add_filter( 'loopbuy_listing_post_type', fn() => 'listing' );
+ * NOTE: "My Listings" and the listings count query the 'loopbuy_listing'
+ * post type (see inc-loopbuy-listing-cpt.php), matching the Sell and My
+ * Listings pages. If your listings use a different post type, override it
+ * via functions.php:
+ *   add_filter( 'loopbuy_listing_post_type', fn() => 'your_post_type' );
  *
  * @package LoopBuy
  */
 
 get_header();
 
-$loopbuy_listing_post_type = apply_filters( 'loopbuy_listing_post_type', 'post' );
+$loopbuy_listing_post_type = apply_filters( 'loopbuy_listing_post_type', 'loopbuy_listing' );
 
 if ( ! is_user_logged_in() ) :
 	?>
@@ -111,6 +111,8 @@ $loopbuy_listings_query = new WP_Query(
 		'author'         => $loopbuy_user_id,
 		'posts_per_page' => 20,
 		'post_status'    => 'publish',
+		'orderby'        => 'date',
+		'order'          => 'DESC',
 	)
 );
 ?>
@@ -223,9 +225,34 @@ $loopbuy_listings_query = new WP_Query(
 
 						<?php if ( $loopbuy_listings_query->have_posts() ) : ?>
 							<ul class="loopbuy-profile-listings">
-								<?php while ( $loopbuy_listings_query->have_posts() ) : $loopbuy_listings_query->the_post(); ?>
+								<?php
+								while ( $loopbuy_listings_query->have_posts() ) :
+									$loopbuy_listings_query->the_post();
+
+									$loopbuy_listing_id     = get_the_ID();
+									$loopbuy_listing_price  = get_post_meta( $loopbuy_listing_id, '_loopbuy_price', true );
+									$loopbuy_listing_status = get_post_meta( $loopbuy_listing_id, '_loopbuy_status', true );
+									$loopbuy_listing_status = $loopbuy_listing_status ? $loopbuy_listing_status : 'active';
+									?>
 									<li class="loopbuy-profile-listing-item">
-										<a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
+										<a href="<?php the_permalink(); ?>" class="loopbuy-profile-listing-link">
+											<span class="loopbuy-profile-listing-image">
+												<?php if ( has_post_thumbnail() ) : ?>
+													<?php the_post_thumbnail( 'thumbnail' ); ?>
+												<?php else : ?>
+													<span class="loopbuy-profile-listing-image-placeholder" aria-hidden="true"></span>
+												<?php endif; ?>
+											</span>
+											<span class="loopbuy-profile-listing-info">
+												<span class="loopbuy-profile-listing-title"><?php the_title(); ?></span>
+												<?php if ( '' !== $loopbuy_listing_price ) : ?>
+													<span class="loopbuy-profile-listing-price">$<?php echo esc_html( number_format_i18n( (float) $loopbuy_listing_price ) ); ?></span>
+												<?php endif; ?>
+												<span class="loopbuy-profile-listing-status status-<?php echo esc_attr( $loopbuy_listing_status ); ?>">
+													<?php echo 'sold' === $loopbuy_listing_status ? esc_html__( 'Sold', 'loopbuy' ) : esc_html__( 'Active', 'loopbuy' ); ?>
+												</span>
+											</span>
+										</a>
 									</li>
 								<?php endwhile; ?>
 							</ul>

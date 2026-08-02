@@ -2778,6 +2778,20 @@ body.dark-mode .theme-toggle,
 	transform: translateY(-1px);
 }
 
+.loopbuy-sell-status {
+	margin: 0 0 18px;
+	font-size: 0.92rem;
+	font-weight: 600;
+}
+
+.loopbuy-sell-status[data-state="error"] {
+	color: #b3261e;
+}
+
+.loopbuy-sell-status[data-state="success"] {
+	color: var(--loopbuy-teal);
+}
+
 @media (max-width: 560px) {
 	.loopbuy-sell-row {
 		grid-template-columns: 1fr;
@@ -3893,22 +3907,79 @@ body.dark-mode .theme-toggle,
 	gap: 12px;
 }
 
-.loopbuy-profile-listing-item a {
-	display: block;
-	padding: 12px 14px;
+.loopbuy-profile-listing-link {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 14px;
 	border: 1px solid var(--loopbuy-border);
 	border-radius: 12px;
 	color: var(--loopbuy-text);
-	font-weight: 600;
-	font-size: 0.95rem;
+	text-decoration: none;
 	transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.loopbuy-profile-listing-item a:hover,
-.loopbuy-profile-listing-item a:focus-visible {
+.loopbuy-profile-listing-link:hover,
+.loopbuy-profile-listing-link:focus-visible {
 	background: var(--loopbuy-soft);
 	border-color: var(--loopbuy-primary);
 	color: var(--loopbuy-text);
+}
+
+.loopbuy-profile-listing-image {
+	flex: 0 0 auto;
+	display: block;
+	width: 64px;
+	height: 64px;
+	border-radius: 10px;
+	overflow: hidden;
+	background: #f4f4f4;
+}
+
+.loopbuy-profile-listing-image img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.loopbuy-profile-listing-image-placeholder {
+	display: block;
+	width: 100%;
+	height: 100%;
+	background: #f4f4f4;
+}
+
+.loopbuy-profile-listing-info {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.loopbuy-profile-listing-title {
+	font-size: 1rem;
+	font-weight: 800;
+	color: var(--loopbuy-text);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.loopbuy-profile-listing-price {
+	color: var(--loopbuy-primary-dark);
+	font-size: 1.05rem;
+	font-weight: 800;
+}
+
+.loopbuy-profile-listing-status {
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: var(--loopbuy-muted);
+}
+
+.loopbuy-profile-listing-status.status-sold {
+	color: #1a8a4c;
 }
 
 .loopbuy-profile-login-notice {
@@ -3929,5 +4000,309 @@ body.dark-mode .theme-toggle,
 @media (max-width: 860px) {
 	.loopbuy-profile-grid {
 		grid-template-columns: 1fr;
+	}
+}
+
+/* ==========================================
+   16. MY LISTINGS PAGE
+   Required wrapper: <div class="page loopbuy-my-listings">
+========================================== */
+
+.loopbuy-mylistings-container {
+	width: min(calc(100% - 40px), var(--loopbuy-container));
+	margin: 0 auto;
+	padding: 40px 0 60px;
+}
+
+.loopbuy-mylistings-heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	margin-bottom: 28px;
+}
+
+.loopbuy-mylistings-heading h1 {
+	margin: 0;
+	font-size: clamp(1.6rem, 3vw, 2rem);
+	font-weight: 800;
+	letter-spacing: -0.03em;
+	color: var(--loopbuy-text);
+}
+
+.loopbuy-mylistings-new-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	border: 0;
+	border-radius: 12px;
+	background: var(--loopbuy-primary);
+	color: #fff !important;
+	padding: 12px 20px;
+	font-weight: 700;
+	font-size: 0.95rem;
+	white-space: nowrap;
+	cursor: pointer;
+	transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.loopbuy-mylistings-new-btn:hover,
+.loopbuy-mylistings-new-btn:focus-visible {
+	background: var(--loopbuy-primary-dark);
+	color: #fff;
+	transform: translateY(-1px);
+}
+
+.loopbuy-mylistings-status {
+	margin: -8px 0 20px;
+	font-size: 0.92rem;
+	font-weight: 600;
+}
+
+.loopbuy-mylistings-status[data-state="success"] {
+	color: var(--loopbuy-teal);
+}
+
+.loopbuy-mylistings-status[data-state="error"] {
+	color: #b3261e;
+}
+
+/* Empty state */
+.loopbuy-mylistings-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	border: 1.5px dashed var(--loopbuy-border);
+	border-radius: var(--loopbuy-radius);
+	padding: clamp(56px, 10vw, 100px) 24px;
+}
+
+.loopbuy-mylistings-empty-icon {
+	display: inline-flex;
+	color: #c7cbd4;
+	margin-bottom: 18px;
+}
+
+.loopbuy-mylistings-empty h2 {
+	margin: 0 0 26px;
+	font-size: 1.2rem;
+	font-weight: 800;
+	color: var(--loopbuy-text);
+}
+
+.loopbuy-mylistings-empty-btn {
+	display: inline-flex;
+	align-items: center;
+	border: 0;
+	border-radius: 12px;
+	background: var(--loopbuy-primary);
+	color: #fff !important;
+	padding: 13px 26px;
+	font-weight: 700;
+	font-size: 0.95rem;
+	cursor: pointer;
+	transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.loopbuy-mylistings-empty-btn:hover,
+.loopbuy-mylistings-empty-btn:focus-visible {
+	background: var(--loopbuy-primary-dark);
+	color: #fff;
+	transform: translateY(-1px);
+}
+
+/* Listing rows */
+.loopbuy-mylistings-list {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.loopbuy-mylistings-item {
+	display: flex;
+	align-items: center;
+	gap: 20px;
+	background: #fff;
+	border: 1px solid var(--loopbuy-border);
+	border-radius: var(--loopbuy-radius);
+	padding: 20px;
+}
+
+.loopbuy-mylistings-item-image {
+	flex: 0 0 auto;
+	display: block;
+	width: 90px;
+	height: 90px;
+	border-radius: 12px;
+	overflow: hidden;
+	background: #f4f4f4;
+}
+
+.loopbuy-mylistings-item-image img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.loopbuy-mylistings-item-image-placeholder {
+	display: block;
+	width: 100%;
+	height: 100%;
+	background: #f4f4f4;
+}
+
+.loopbuy-mylistings-item-content {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.loopbuy-mylistings-item-title-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+	margin-bottom: 6px;
+}
+
+.loopbuy-mylistings-item-title {
+	font-size: 1.1rem;
+	font-weight: 800;
+	color: var(--loopbuy-text);
+	text-decoration: none;
+}
+
+.loopbuy-mylistings-item-title:hover,
+.loopbuy-mylistings-item-title:focus-visible {
+	color: var(--loopbuy-primary-dark);
+}
+
+.loopbuy-condition-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 5px 11px;
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 700;
+	line-height: 1;
+	white-space: nowrap;
+}
+
+.loopbuy-condition-badge.condition-new,
+.loopbuy-condition-badge.condition-like-new {
+	background: #dceeff;
+	color: #1671a5;
+}
+
+.loopbuy-condition-badge.condition-good {
+	background: #fff0c2;
+	color: #a96500;
+}
+
+.loopbuy-condition-badge.condition-fair {
+	background: #f1e4ff;
+	color: #7a3fc4;
+}
+
+.loopbuy-mylistings-item-price {
+	margin: 0 0 10px;
+	color: var(--loopbuy-primary-dark);
+	font-size: 1.25rem;
+	font-weight: 800;
+}
+
+.loopbuy-status-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 5px 12px;
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 700;
+	line-height: 1;
+	white-space: nowrap;
+}
+
+.loopbuy-status-badge.status-active {
+	background: var(--loopbuy-soft);
+	color: var(--loopbuy-primary-dark);
+}
+
+.loopbuy-status-badge.status-sold {
+	background: #dcf3e6;
+	color: #1a8a4c;
+}
+
+.loopbuy-mylistings-item-actions {
+	flex: 0 0 auto;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.loopbuy-mylistings-action-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	border: 1px solid var(--loopbuy-border);
+	border-radius: 10px;
+	background: #fff;
+	color: var(--loopbuy-text);
+	padding: 10px 16px;
+	font-weight: 600;
+	font-size: 0.9rem;
+	white-space: nowrap;
+	text-decoration: none;
+	cursor: pointer;
+	transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.loopbuy-mylistings-action-btn:hover,
+.loopbuy-mylistings-action-btn:focus-visible {
+	background: var(--loopbuy-soft);
+	border-color: var(--loopbuy-primary);
+	color: var(--loopbuy-text);
+}
+
+.loopbuy-mylistings-delete-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 38px;
+	height: 38px;
+	border: 1px solid var(--loopbuy-border);
+	border-radius: 10px;
+	background: #fff;
+	color: #d84b5b;
+	cursor: pointer;
+	padding: 0;
+	transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.loopbuy-mylistings-delete-btn:hover,
+.loopbuy-mylistings-delete-btn:focus-visible {
+	background: #fdecec;
+	border-color: #f3b9c0;
+}
+
+@media (max-width: 620px) {
+	.loopbuy-mylistings-container {
+		padding: 28px 0 48px;
+	}
+
+	.loopbuy-mylistings-item {
+		flex-wrap: wrap;
+	}
+
+	.loopbuy-mylistings-item-content {
+		flex: 1 1 100%;
+		order: 2;
+	}
+
+	.loopbuy-mylistings-item-actions {
+		flex: 1 1 100%;
+		order: 3;
+		margin-top: 4px;
 	}
 }
