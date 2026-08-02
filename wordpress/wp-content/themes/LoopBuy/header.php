@@ -9,6 +9,14 @@
  * @package LoopBuy
  */
 
+// Saved / Cart badge counts.
+// Saved items are tracked client-side in localStorage as a flat array of
+// product IDs (key: loopbuy_saved_products) — written by page-saved.php.
+// Cart items are tracked client-side in localStorage as a map of
+// product id -> quantity (key: loopbuy_cart_items) — written by
+// page-cart.php and page-product-detail.php's "Add to Cart" button.
+// Since this data lives in the browser (works for guests too), the counts
+// below are filled in by JS on load rather than rendered from PHP.
 ?>
 <!doctype html>
 <html <?php language_attributes(); ?>>
@@ -83,25 +91,31 @@
 				</a>
 
 				<a href="<?php echo esc_url( home_url( '/saved/' ) ); ?>" class="header-icon-link">
-					<svg width="19" height="19" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-						<path d="M12 20.5s-7.5-4.6-10-9.3C.5 7.8 2.4 4.5 6 4.5c2.1 0 3.6 1.2 6 3.7 2.4-2.5 3.9-3.7 6-3.7 3.6 0 5.5 3.3 4 6.7-2.5 4.7-10 9.3-10 9.3Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
-					</svg>
-					<span><?php esc_html_e( 'Saved', 'loopbuy' ); ?></span>
+					<span class="header-icon-wrap">
+						<svg width="19" height="19" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+							<path d="M12 20.5s-7.5-4.6-10-9.3C.5 7.8 2.4 4.5 6 4.5c2.1 0 3.6 1.2 6 3.7 2.4-2.5 3.9-3.7 6-3.7 3.6 0 5.5 3.3 4 6.7-2.5 4.7-10 9.3-10 9.3Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+						</svg>
+						<span class="loopbuy-header-badge" data-saved-count hidden>0</span>
+					</span>
+					<span class="header-icon-label"><?php esc_html_e( 'Saved', 'loopbuy' ); ?></span>
 				</a>
 
 				<a href="<?php echo esc_url( home_url( '/cart/' ) ); ?>" class="header-icon-link">
-					<svg width="19" height="19" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-						<path d="M6 8V6a6 6 0 1 1 12 0v2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
-						<path d="M4.5 8H19.5L18.6 19.2A2 2 0 0 1 16.6 21H7.4A2 2 0 0 1 5.4 19.2L4.5 8Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
-					</svg>
-					<span><?php esc_html_e( 'Cart', 'loopbuy' ); ?></span>
+					<span class="header-icon-wrap">
+						<svg width="19" height="19" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+							<path d="M6 8V6a6 6 0 1 1 12 0v2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+							<path d="M4.5 8H19.5L18.6 19.2A2 2 0 0 1 16.6 21H7.4A2 2 0 0 1 5.4 19.2L4.5 8Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+						</svg>
+						<span class="loopbuy-header-badge" data-cart-count hidden>0</span>
+					</span>
+					<span class="header-icon-label"><?php esc_html_e( 'Cart', 'loopbuy' ); ?></span>
 				</a>
 
 				<a href="#" class="header-icon-link">
 					<svg width="19" height="19" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
 						<path d="M4 12a8 8 0 1 1 3.2 6.4L4 20l1.3-3.7A7.96 7.96 0 0 1 4 12Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
 					</svg>
-					<span><?php esc_html_e( 'Chat', 'loopbuy' ); ?></span>
+					<span class="header-icon-label"><?php esc_html_e( 'Chat', 'loopbuy' ); ?></span>
 				</a>
 
 				<?php if ( is_user_logged_in() ) : ?>
@@ -174,6 +188,63 @@
 				<?php endif; ?>
 
 			</div><!-- .header-actions -->
+
+			<script>
+			/* =========================================================
+			   HEADER SAVED / CART BADGES
+			   Reads the same localStorage keys that page-saved.php and
+			   page-cart.php read/write, so the counts stay in sync no
+			   matter which page the header is rendered on.
+			========================================================= */
+			( function () {
+
+				var SAVED_KEY = 'loopbuy_saved_products';
+				var CART_KEY  = 'loopbuy_cart_items';
+
+				function updateBadge( selector, count ) {
+					var badge = document.querySelector( selector );
+					if ( ! badge ) {
+						return;
+					}
+					badge.textContent = count > 99 ? '99+' : String( count );
+					badge.hidden = count === 0;
+				}
+
+				function refreshBadges() {
+					var savedCount = 0;
+					var cartCount  = 0;
+
+					try {
+						var rawSaved = window.localStorage.getItem( SAVED_KEY );
+						var savedIds = rawSaved ? JSON.parse( rawSaved ) : [];
+						savedCount = Array.isArray( savedIds ) ? savedIds.length : 0;
+					} catch ( e ) {}
+
+					try {
+						var rawCart = window.localStorage.getItem( CART_KEY );
+						var cart    = rawCart ? JSON.parse( rawCart ) : {};
+						if ( cart && typeof cart === 'object' && ! Array.isArray( cart ) ) {
+							Object.keys( cart ).forEach( function ( id ) {
+								cartCount += parseInt( cart[ id ], 10 ) || 0;
+							} );
+						}
+					} catch ( e ) {}
+
+					updateBadge( '[data-saved-count]', savedCount );
+					updateBadge( '[data-cart-count]', cartCount );
+				}
+
+				document.addEventListener( 'DOMContentLoaded', refreshBadges );
+
+				// Keep badges in sync if saved/cart change in another tab.
+				window.addEventListener( 'storage', function ( event ) {
+					if ( event.key === SAVED_KEY || event.key === CART_KEY ) {
+						refreshBadges();
+					}
+				} );
+
+			} )();
+			</script>
 
 			<?php if ( is_user_logged_in() ) : ?>
 				<script>
