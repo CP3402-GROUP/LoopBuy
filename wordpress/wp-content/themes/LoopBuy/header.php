@@ -663,7 +663,7 @@
 				<?php else : ?>
 
 					<a
-						href="<?php echo esc_url( wp_login_url() ); ?>"
+						href="<?php echo esc_url( home_url( '/login/' ) ); ?>"
 						class="auth-link"
 					>
 						<?php esc_html_e( 'Log in', 'loopbuy' ); ?>
