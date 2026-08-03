@@ -206,6 +206,7 @@ if (!$product) {
                             )
                         );
                         ?>"
+                        data-chat-product-id="<?php echo esc_attr($product['id']); ?>"
                     >
                         💬 Chat
                     </a>
@@ -284,73 +285,191 @@ if (!$product) {
 
 <script>
 /* =========================================================
-   ADD TO CART
-   Persists to the same localStorage cart map that
-   page-cart.php reads from: { productId: quantity }
+   PRODUCT DETAIL PAGE ACTIONS
+
+   1. Add product to cart
+   2. Update the header cart count
+   3. Save the product to chat history before opening Messages
 ========================================================= */
+
 document.addEventListener('DOMContentLoaded', function () {
 
-	var STORAGE_KEY = 'loopbuy_cart_items';
+	/* =====================================================
+	   ELEMENTS
+	===================================================== */
 
 	var addToCartButton = document.querySelector('.add-cart-button');
+	var chatButton = document.querySelector('.chat-button');
 
-	if (!addToCartButton) {
-		return;
-	}
+
+	/* =====================================================
+	   CART
+	===================================================== */
+
+	var CART_STORAGE_KEY = 'loopbuy_cart_items';
 
 	function getCart() {
 		try {
-			var raw = window.localStorage.getItem(STORAGE_KEY);
+			var raw = window.localStorage.getItem(CART_STORAGE_KEY);
 			var cart = raw ? JSON.parse(raw) : {};
-			return (cart && typeof cart === 'object' && !Array.isArray(cart)) ? cart : {};
-		} catch (e) {
+
+			if (
+				cart &&
+				typeof cart === 'object' &&
+				!Array.isArray(cart)
+			) {
+				return cart;
+			}
+
+			return {};
+		} catch (error) {
 			return {};
 		}
 	}
 
 	function setCart(cart) {
 		try {
-			window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
-		} catch (e) {}
+			window.localStorage.setItem(
+				CART_STORAGE_KEY,
+				JSON.stringify(cart)
+			);
+		} catch (error) {
+			console.error('Unable to save cart.', error);
+		}
+	}
+
+	function getCartTotalQuantity(cart) {
+		return Object.keys(cart).reduce(function (total, productId) {
+			var quantity = parseInt(cart[productId], 10) || 0;
+			return total + quantity;
+		}, 0);
 	}
 
 	function updateCartCountBadge(count) {
 		var badge = document.querySelector('[data-cart-count]');
-		if (badge) {
-			badge.textContent = count;
-			badge.hidden = count === 0;
+
+		if (!badge) {
+			return;
 		}
+
+		badge.textContent = count;
+		badge.hidden = count === 0;
 	}
 
-	function cartTotalQuantity(cart) {
-		return Object.keys(cart).reduce(function (sum, id) {
-			return sum + (parseInt(cart[id], 10) || 0);
-		}, 0);
+	function initialiseCartCount() {
+		var cart = getCart();
+		var totalQuantity = getCartTotalQuantity(cart);
+
+		updateCartCountBadge(totalQuantity);
 	}
 
-	updateCartCountBadge(cartTotalQuantity(getCart()));
+	function handleAddToCart() {
+		if (!addToCartButton) {
+			return;
+		}
 
-	addToCartButton.addEventListener('click', function () {
-		var id = addToCartButton.getAttribute('data-product-id');
+		var productId = addToCartButton.getAttribute('data-product-id');
+
+		if (!productId) {
+			return;
+		}
+
 		var cart = getCart();
 
-		cart[id] = (cart[id] || 0) + 1;
+		cart[productId] = (parseInt(cart[productId], 10) || 0) + 1;
+
 		setCart(cart);
-		updateCartCountBadge(cartTotalQuantity(cart));
+		updateCartCountBadge(getCartTotalQuantity(cart));
 
 		var originalText = addToCartButton.innerHTML;
+
 		addToCartButton.innerHTML = '✓ Added to Cart';
 		addToCartButton.disabled = true;
 
-		setTimeout(function () {
+		window.setTimeout(function () {
 			addToCartButton.innerHTML = originalText;
 			addToCartButton.disabled = false;
 		}, 1200);
-	});
+	}
+
+	if (addToCartButton) {
+		addToCartButton.addEventListener(
+			'click',
+			handleAddToCart
+		);
+	}
+
+	initialiseCartCount();
+
+
+	/* =====================================================
+	   CHAT HISTORY
+
+	   Stores only products that the user has actually clicked
+	   Chat for. The Messages page can read this list and hide
+	   all other products.
+	===================================================== */
+
+	var CHAT_HISTORY_KEY = 'loopbuy_chat_history';
+
+	function getChatHistory() {
+		try {
+			var raw = window.localStorage.getItem(CHAT_HISTORY_KEY);
+			var history = raw ? JSON.parse(raw) : [];
+
+			if (Array.isArray(history)) {
+				return history.map(String);
+			}
+
+			return [];
+		} catch (error) {
+			return [];
+		}
+	}
+
+	function setChatHistory(history) {
+		try {
+			window.localStorage.setItem(
+				CHAT_HISTORY_KEY,
+				JSON.stringify(history)
+			);
+		} catch (error) {
+			console.error('Unable to save chat history.', error);
+		}
+	}
+
+	function saveProductToChatHistory() {
+		if (!chatButton) {
+			return;
+		}
+
+		var productId = chatButton.getAttribute(
+			'data-chat-product-id'
+		);
+
+		if (!productId) {
+			return;
+		}
+
+		var history = getChatHistory();
+
+		if (!history.includes(String(productId))) {
+			history.unshift(String(productId));
+		}
+
+		setChatHistory(history);
+	}
+
+	if (chatButton) {
+		chatButton.addEventListener(
+			'click',
+			saveProductToChatHistory
+		);
+	}
 
 });
 </script>
 
 <?php
-get_footer(); 
+get_footer();
 ?>
