@@ -670,7 +670,7 @@
 					</a>
 
 					<a
-						href="<?php echo esc_url( wp_registration_url() ); ?>"
+						href="<?php echo esc_url( home_url( '/register/' ) ); ?>"
 						class="auth-button"
 					>
 						<?php esc_html_e( 'Sign up', 'loopbuy' ); ?>
