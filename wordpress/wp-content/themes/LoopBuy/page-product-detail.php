@@ -190,16 +190,25 @@ if (!$product) {
                     <button
                         class="detail-favourite-button"
                         type="button"
+                        data-product-id="<?php echo esc_attr($product['id']); ?>"
                     >
                         ♡ Save
                     </button>
 
-                    <button
+                    <a
                         class="chat-button"
-                        type="button"
+                        href="<?php
+                        echo esc_url(
+                            add_query_arg(
+                                'product_id',
+                                $product['id'],
+                                home_url('/messages/')
+                            )
+                        );
+                        ?>"
                     >
                         💬 Chat
-                    </button>
+                    </a>
 
                 </div>
 

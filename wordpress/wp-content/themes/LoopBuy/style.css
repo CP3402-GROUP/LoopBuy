@@ -1854,36 +1854,83 @@ a:active {
 
 .loopbuy-product-page .product-actions {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr;
+    grid-template-columns: minmax(0, 2fr) minmax(120px, 1fr) minmax(120px, 1fr);
     gap: 12px;
     margin-top: 20px;
 }
 
-.loopbuy-product-page .product-actions button {
+.loopbuy-product-page .product-actions button,
+.loopbuy-product-page .product-actions .chat-button {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     height: 48px;
-    border-radius: 11px;
+    padding: 0 16px;
     border: 1px solid var(--loopbuy-border);
-    background: var(--loopbuy-surface);
+    border-radius: 11px;
+    background: #ffffff;
+    color: #111827;
+    font-family: inherit;
     font-size: 15px;
     font-weight: 600;
+    line-height: 1;
+    text-align: center;
+    text-decoration: none;
     cursor: pointer;
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease,
+        transform 0.2s ease;
 }
 
 .loopbuy-product-page .product-actions .add-cart-button {
-    border: none;
+    border-color: #687795;
     background: #687795;
-    color: white;
+    color: #ffffff;
+}
+
+.loopbuy-product-page .product-actions .add-cart-button:hover {
+    background: #566785;
+    border-color: #566785;
+}
+
+.loopbuy-product-page .product-actions .detail-favourite-button,
+.loopbuy-product-page .product-actions .chat-button {
+    border-color: #d5dae3;
+    background: #ffffff;
+    color: #111827;
+}
+
+.loopbuy-product-page .product-actions .chat-button:hover,
+.loopbuy-product-page .product-actions .detail-favourite-button:hover {
+    border-color: #687795;
+    background: #f3f5f8;
+    color: #111827;
+    transform: translateY(-1px);
 }
 
 .loopbuy-product-page .detail-favourite-button.saved {
+    border-color: #e53935;
+    background: #fff5f5;
     color: #e53935;
 }
 
-.loopbuy-product-page .chat-button:hover,
-.loopbuy-product-page .detail-favourite-button:hover {
-    background: #f6f6f6;
+.loopbuy-product-page .product-actions .add-cart-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.75;
 }
 
+@media (max-width: 680px) {
+    .loopbuy-product-page .product-actions {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .loopbuy-product-page .product-actions .add-cart-button {
+        grid-column: 1 / -1;
+    }
+}
 
 /* REVIEWS */
 
@@ -4352,5 +4399,193 @@ html.dark-mode .theme-toggle,
 		flex: 1 1 100%;
 		order: 3;
 		margin-top: 4px;
+	}
+}
+
+/* ==========================================
+   MESSAGES PAGE
+========================================== */
+
+.loopbuy-messages-page {
+	padding: 32px 20px 60px;
+	background: #ffffff;
+}
+
+.loopbuy-messages-container {
+	width: min(100%, 1040px);
+	margin: 0 auto;
+}
+
+.loopbuy-messages-container > h1 {
+	margin: 0 0 18px;
+	font-size: 2rem;
+}
+
+.loopbuy-chat-layout {
+	display: grid;
+	grid-template-columns: 310px minmax(0, 1fr);
+	min-height: 570px;
+	overflow: hidden;
+	border: 1px solid #e2e6ec;
+	border-radius: 18px;
+	background: #ffffff;
+}
+
+.loopbuy-conversation-list {
+	overflow-y: auto;
+	border-right: 1px solid #e2e6ec;
+}
+
+.loopbuy-conversation-item {
+	display: flex;
+	gap: 12px;
+	padding: 16px;
+	border-bottom: 1px solid #e2e6ec;
+	color: inherit;
+	text-decoration: none;
+}
+
+.loopbuy-conversation-item:hover,
+.loopbuy-conversation-item.is-active {
+	background: #f1f4f9;
+}
+
+.loopbuy-conversation-item img {
+	width: 52px;
+	height: 52px;
+	flex-shrink: 0;
+	border-radius: 10px;
+	object-fit: cover;
+}
+
+.loopbuy-conversation-item h2 {
+	margin: 0 0 5px;
+	font-size: 0.95rem;
+}
+
+.loopbuy-conversation-item p {
+	display: -webkit-box;
+	margin: 0;
+	overflow: hidden;
+	color: #7b8492;
+	font-size: 0.82rem;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 1;
+}
+
+.loopbuy-chat-panel {
+	display: flex;
+	min-width: 0;
+	flex-direction: column;
+}
+
+.loopbuy-chat-header {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 14px 18px;
+	border-bottom: 1px solid #e2e6ec;
+}
+
+.loopbuy-chat-header img {
+	width: 48px;
+	height: 48px;
+	border-radius: 10px;
+	object-fit: cover;
+}
+
+.loopbuy-chat-header h2 {
+	margin: 0 0 4px;
+	font-size: 1rem;
+}
+
+.loopbuy-chat-header p {
+	margin: 0;
+	color: #747d8b;
+	font-size: 0.85rem;
+}
+
+.loopbuy-view-listing-link {
+	margin-left: auto;
+	color: #687792;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.loopbuy-chat-messages {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	gap: 12px;
+	overflow-y: auto;
+	padding: 24px;
+}
+
+.loopbuy-chat-empty {
+	margin: auto;
+	color: #929aa7;
+	text-align: center;
+}
+
+.loopbuy-message-bubble {
+	max-width: min(75%, 520px);
+	padding: 12px 16px;
+	border-radius: 18px;
+	line-height: 1.45;
+}
+
+.loopbuy-message-buyer {
+	align-self: flex-end;
+	border-bottom-right-radius: 5px;
+	background: #687792;
+	color: #ffffff;
+}
+
+.loopbuy-chat-form {
+	display: flex;
+	gap: 10px;
+	padding: 14px;
+	border-top: 1px solid #e2e6ec;
+}
+
+.loopbuy-chat-form input {
+	width: 100%;
+	min-width: 0;
+	height: 44px;
+	padding: 0 16px;
+	border: 1px solid #dfe3e8;
+	border-radius: 999px;
+	outline: none;
+}
+
+.loopbuy-chat-form input:focus {
+	border-color: #687792;
+	box-shadow: 0 0 0 3px rgba(104, 119, 146, 0.14);
+}
+
+.loopbuy-chat-form button {
+	width: 44px;
+	height: 44px;
+	flex-shrink: 0;
+	border: 0;
+	border-radius: 50%;
+	background: #687792;
+	color: #ffffff;
+	cursor: pointer;
+}
+
+@media (max-width: 780px) {
+	.loopbuy-chat-layout {
+		grid-template-columns: 1fr;
+	}
+
+	.loopbuy-conversation-list {
+		max-height: 230px;
+		border-right: 0;
+		border-bottom: 1px solid #e2e6ec;
+	}
+
+	.loopbuy-chat-panel {
+		min-height: 520px;
 	}
 }
