@@ -82,7 +82,7 @@ $loopbuy_my_listings_url  = $loopbuy_my_listings_page ? get_permalink( $loopbuy_
 						<li><a href="<?php echo esc_url( $loopbuy_about_url ); ?>"><?php esc_html_e( 'About', 'loopbuy' ); ?></a></li>
 						<li><a href="<?php echo esc_url( $loopbuy_contact_url ); ?>"><?php esc_html_e( 'Contact', 'loopbuy' ); ?></a></li>
 						<li><a href="<?php echo esc_url( $loopbuy_my_listings_url ); ?>"><?php esc_html_e( 'My Listings', 'loopbuy' ); ?></a></li>
-						<li><a href="#"><?php esc_html_e( 'Orders', 'loopbuy' ); ?></a></li>
+						<li><a href="<?php echo esc_url( home_url( '/orders/' ) ); ?>"><?php esc_html_e( 'Orders', 'loopbuy' ); ?></a></li>
 					</ul>
 				<?php endif; ?>
 			</div>
