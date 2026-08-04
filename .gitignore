@@ -11,8 +11,11 @@ deployment/deploy.log*
 deployment/.last-successful-deploy*
 .DS_Store
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> feature/frontend
 # Local WordPress-generated content
 wordpress/wp-content/index.php
 

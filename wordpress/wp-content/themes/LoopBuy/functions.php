@@ -142,6 +142,17 @@ function loopbuy_scripts() {
 	wp_style_add_data( 'loopbuy-style', 'rtl', 'replace' );
 
 	wp_enqueue_script( 'loopbuy-navigation', get_template_directory_uri() . '/js/navigation.js', array(), _S_VERSION, true );
+	/*
+	 * Favourite and Saved Items functionality.
+	 */
+	wp_enqueue_script(
+		'loopbuy-favourite',
+		get_template_directory_uri()
+			. '/js/favourite.js',
+		array(),
+		_S_VERSION,
+		true
+	);
 
 	if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) {
 		wp_enqueue_script( 'comment-reply' );
@@ -176,3 +187,13 @@ if ( defined( 'JETPACK__VERSION' ) ) {
 	require get_template_directory() . '/inc/jetpack.php';
 }
 
+add_action( 'init', function () {
+	register_post_type( 'loopbuy_listing', array(
+		'labels'      => array( 'name' => 'Listings', 'singular_name' => 'Listing' ),
+		'public'      => true,
+		'show_ui'     => true,
+		'supports'    => array( 'title', 'editor', 'thumbnail', 'author' ),
+		'has_archive' => false,
+		'rewrite'     => array( 'slug' => 'listing' ),
+	) );
+} );
