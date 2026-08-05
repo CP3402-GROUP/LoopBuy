@@ -177,9 +177,7 @@ function loopbuy_find_order_product( $product_id, $products ) {
 								<img
 									src="<?php
 									echo esc_url(
-										get_template_directory_uri()
-										. '/images/'
-										. $product['image']
+										loopbuy_product_image_url( $product )
 									);
 									?>"
 									alt="<?php

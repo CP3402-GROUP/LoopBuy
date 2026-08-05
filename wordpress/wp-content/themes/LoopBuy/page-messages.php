@@ -91,9 +91,7 @@ if ( $product_id > 0 ) {
 						<img
 							src="<?php
 							echo esc_url(
-								get_template_directory_uri()
-								. '/images/'
-								. $product['image']
+								loopbuy_product_image_url( $product )
 							);
 							?>"
 							alt="<?php echo esc_attr( $product['name'] ); ?>"
@@ -139,9 +137,7 @@ if ( $product_id > 0 ) {
 						<img
 							src="<?php
 							echo esc_url(
-								get_template_directory_uri()
-								. '/images/'
-								. $selected_product['image']
+								loopbuy_product_image_url( $selected_product )
 							);
 							?>"
 							alt="<?php echo esc_attr( $selected_product['name'] ); ?>"

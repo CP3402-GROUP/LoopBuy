@@ -14,28 +14,51 @@
 
 get_header();
 
+/* Get a positive numeric product ID from the URL. */
+$product_id_raw = isset( $_GET['id'] )
+    ? wp_unslash( $_GET['id'] )
+    : '1';
+$product_id = filter_var(
+    $product_id_raw,
+    FILTER_VALIDATE_INT,
+    array(
+        'options' => array(
+            'min_range' => 1,
+        ),
+    )
+);
 
+if ( false === $product_id ) {
+    $product_id = 0;
+}
 
-/* Load all product data */
-require get_template_directory() . '/inc/product-data.php';
-
-
-/* Get product ID from URL */
-$product_id = isset($_GET['id'])
-    ? intval($_GET['id'])
-    : 1;
-
-
-/* Find the selected product */
+/* Prefer the dedicated backend detail endpoint over the capped catalogue. */
 $product = null;
 
-foreach ($products as $item) {
+if ( $product_id > 0 ) {
+    $loopbuy_backend_product = function_exists( 'loopbuy_backend_get_public_product' )
+        ? loopbuy_backend_get_public_product( $product_id )
+        : new WP_Error( 'loopbuy_backend_bridge_unavailable', 'The backend detail bridge is unavailable.' );
 
-    if ((int) $item['id'] === $product_id) {
-        $product = $item;
-        break;
+    if ( is_wp_error( $loopbuy_backend_product ) ) {
+        // A genuine backend/contract failure may use the bundled legacy data.
+        // Suppress the catalogue API call so a 404 or empty detail response can
+        // never be replaced by an unrelated row from the first 100 listings.
+        $loopbuy_skip_backend_catalog = true;
+        require get_template_directory() . '/inc/product-data.php';
+        unset( $loopbuy_skip_backend_catalog );
+
+        foreach ( $products as $item ) {
+            if ( (int) $item['id'] === $product_id ) {
+                $product = $item;
+                break;
+            }
+        }
+    } elseif ( is_array( $loopbuy_backend_product ) ) {
+        $product = $loopbuy_backend_product;
     }
 
+    unset( $loopbuy_backend_product );
 }
 
 
@@ -61,6 +84,40 @@ if (!$product) {
     get_footer();
     return;
 }
+
+$product_moderation_status = sanitize_key(
+    isset($product['moderation_status'])
+        ? $product['moderation_status']
+        : ''
+);
+$product_scam_label = sanitize_key(
+    isset($product['scam_label'])
+        ? $product['scam_label']
+        : ''
+);
+$product_is_verified =
+    'approved' === $product_moderation_status
+    && 'low_risk' === $product_scam_label;
+$product_safety_state = isset($product['safety_state'])
+    ? sanitize_key($product['safety_state'])
+    : 'unavailable';
+
+if ($product_is_verified) {
+    $product_safety_message = __('This listing passed safety screening.', 'loopbuy');
+} elseif ('pending' === $product_safety_state) {
+    $product_safety_message = __('Safety screening is in progress.', 'loopbuy');
+} elseif ('review' === $product_safety_state) {
+    $product_safety_message = __('Safety screening requires additional review.', 'loopbuy');
+} else {
+    $product_safety_message = __('Safety screening status is not available.', 'loopbuy');
+}
+
+$product_image_url = function_exists( 'loopbuy_product_image_url' )
+    ? loopbuy_product_image_url( $product )
+    : esc_url_raw(
+        isset( $product['image_url'] ) ? $product['image_url'] : '',
+        array( 'http', 'https' )
+    );
 ?>
 
 
@@ -81,13 +138,7 @@ if (!$product) {
             <div class="product-detail-image">
 
                 <img
-                    src="<?php
-                    echo esc_url(
-                        get_template_directory_uri()
-                        . '/images/'
-                        . $product['image']
-                    );
-                    ?>"
+                    src="<?php echo esc_url( $product_image_url ); ?>"
                     alt="<?php echo esc_attr($product['name']); ?>"
                 >
 
@@ -102,7 +153,7 @@ if (!$product) {
                         <?php echo esc_html($product['condition']); ?>
                     </span>
 
-                    <?php if (!empty($product['verified'])) : ?>
+                    <?php if ($product_is_verified) : ?>
 
                         <span class="product-verified">
                             ● Verified
@@ -173,7 +224,7 @@ if (!$product) {
 
 
                 <div class="product-safe-box">
-                    🛡 This listing passed safety screening.
+                    🛡 <?php echo esc_html($product_safety_message); ?>
                 </div>
 
 

@@ -25,8 +25,14 @@ $loopbuy_saved_page       = get_page_by_path( 'saved' );
 $loopbuy_saved_url        = $loopbuy_saved_page ? get_permalink( $loopbuy_saved_page ) : home_url( '/saved/' );
 $loopbuy_cart_page        = get_page_by_path( 'cart' );
 $loopbuy_cart_url         = $loopbuy_cart_page ? get_permalink( $loopbuy_cart_page ) : home_url( '/cart/' );
+$loopbuy_ai_page          = get_page_by_path( 'ai-assistant' );
+$loopbuy_ai_url           = $loopbuy_ai_page ? get_permalink( $loopbuy_ai_page ) : home_url( '/ai-assistant/' );
 $loopbuy_my_listings_page = get_page_by_path( 'my-listings' );
 $loopbuy_my_listings_url  = $loopbuy_my_listings_page ? get_permalink( $loopbuy_my_listings_page ) : home_url( '/my-listings/' );
+$loopbuy_privacy_page     = get_page_by_path( 'privacy-policy' );
+$loopbuy_privacy_url      = $loopbuy_privacy_page ? get_permalink( $loopbuy_privacy_page ) : home_url( '/privacy-policy/' );
+$loopbuy_terms_page       = get_page_by_path( 'terms' );
+$loopbuy_terms_url        = $loopbuy_terms_page ? get_permalink( $loopbuy_terms_page ) : home_url( '/terms/' );
 
 ?>
 
@@ -69,6 +75,7 @@ $loopbuy_my_listings_url  = $loopbuy_my_listings_page ? get_permalink( $loopbuy_
 						<li><a href="<?php echo esc_url( $loopbuy_sell_url ); ?>"><?php esc_html_e( 'Sell', 'loopbuy' ); ?></a></li>
 						<li><a href="<?php echo esc_url( $loopbuy_saved_url ); ?>"><?php esc_html_e( 'Saved', 'loopbuy' ); ?></a></li>
 						<li><a href="<?php echo esc_url( $loopbuy_cart_url ); ?>"><?php esc_html_e( 'Cart', 'loopbuy' ); ?></a></li>
+						<li><a href="<?php echo esc_url( $loopbuy_ai_url ); ?>"><?php esc_html_e( 'AI Shopping Assistant', 'loopbuy' ); ?></a></li>
 					</ul>
 				<?php endif; ?>
 			</div>
@@ -116,9 +123,9 @@ $loopbuy_my_listings_url  = $loopbuy_my_listings_page ? get_permalink( $loopbuy_
 			</span>
 
 			<span class="footer-legal-links">
-				<a href="#"><?php esc_html_e( 'Privacy', 'loopbuy' ); ?></a>
-				<a href="#"><?php esc_html_e( 'Terms', 'loopbuy' ); ?></a>
-				<a href="#"><?php esc_html_e( 'Cookies', 'loopbuy' ); ?></a>
+				<a href="<?php echo esc_url( $loopbuy_privacy_url ); ?>"><?php esc_html_e( 'Privacy', 'loopbuy' ); ?></a>
+				<a href="<?php echo esc_url( $loopbuy_terms_url ); ?>"><?php esc_html_e( 'Terms', 'loopbuy' ); ?></a>
+				<a href="<?php echo esc_url( $loopbuy_privacy_url . '#cookies-and-storage' ); ?>"><?php esc_html_e( 'Cookies', 'loopbuy' ); ?></a>
 			</span>
 		</div><!-- .site-info -->
 

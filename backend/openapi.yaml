@@ -1,0 +1,2488 @@
+openapi: 3.1.0
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+info:
+  title: LoopBuy Backend API
+  version: 1.0.0
+  description: >-
+    REST API for LoopBuy accounts, marketplace listings, social features,
+    scam screening, recommendations, and the RAG shopping assistant.
+servers:
+  - url: http://localhost:8090
+    description: Docker Compose local API
+security: []
+tags:
+  - name: Health
+  - name: Auth
+  - name: Categories
+  - name: Listings
+  - name: Media
+  - name: Users
+  - name: Favourites
+  - name: Cart
+  - name: Conversations
+  - name: Recommendations
+  - name: Assistant
+
+paths:
+  /media/{path}:
+    parameters:
+      - name: path
+        in: path
+        required: true
+        description: >-
+          Server-generated media object key. Clients receive this path through
+          `ListingImage.image_url`; they must not construct it themselves.
+        schema:
+          type: string
+          pattern: '^(?:demo/[a-z0-9-]+-v[1-9][0-9]*\.(?:jpg|jpeg|png|webp|avif)|listings/[1-9][0-9]*/[a-f0-9]{32}\.(?:jpg|png|webp|gif))$'
+    get:
+      tags: [Media]
+      operationId: getMediaObject
+      summary: Read a local listing image
+      description: Supports conditional requests, byte ranges, and HEAD semantics.
+      responses:
+        '200':
+          description: >-
+            Image bytes with nosniff headers. A generated user upload is served
+            only while its exact listing/image URL reference exists in MySQL;
+            orphaned files return 404. Revocable user uploads return
+            `Cache-Control: private, no-store`; versioned demo assets use a
+            one-year immutable cache policy.
+          content:
+            image/jpeg:
+              schema: {type: string, format: binary}
+            image/png:
+              schema: {type: string, format: binary}
+            image/webp:
+              schema: {type: string, format: binary}
+            image/gif:
+              schema: {type: string, format: binary}
+            image/avif:
+              schema: {type: string, format: binary}
+        '404':
+          description: Object key is invalid or the file does not exist.
+
+  /health/live:
+    get:
+      tags: [Health]
+      operationId: getLiveness
+      summary: Check process liveness
+      responses:
+        '200':
+          description: Process is alive.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Liveness'
+
+  /health/ready:
+    get:
+      tags: [Health]
+      operationId: getReadiness
+      summary: Check required dependencies and optional AI configuration
+      description: >-
+        MySQL, ML, and Qdrant are required. Missing embeddings are degraded but
+        ready. Missing Qwen is degraded when deterministic fallback is enabled,
+        otherwise it is not ready. Google OAuth and Resend are configuration-only
+        readiness components. Configured embeddings, Qwen, and email delivery are
+        reported without calling those providers.
+      responses:
+        '200':
+          description: Required dependencies are reachable; optional AI may be degraded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Readiness'
+        '503':
+          description: MySQL, ML, or Qdrant is unavailable, or Qwen is disabled with no fallback.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Readiness'
+
+  /api/v1/auth/register:
+    post:
+      tags: [Auth]
+      operationId: register
+      summary: Register an account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '202':
+          description: Unverified account created and verification email accepted for delivery; no session is issued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationPendingResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      operationId: login
+      summary: Log in with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: New access and refresh tokens.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/auth/google:
+    post:
+      tags: [Auth]
+      operationId: loginWithGoogle
+      summary: Exchange a Google authorization code for a LoopBuy session
+      description: >-
+        The backend exchanges the one-time code with the exact allowlisted redirect URI and
+        PKCE verifier, validates Google's signed ID token, and persists only the stable provider
+        identity. Google access and refresh tokens are not stored.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleAuthRequest'
+      responses:
+        '200':
+          description: Google identity authenticated and LoopBuy tokens issued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/auth/email/verify:
+    post:
+      tags: [Auth]
+      operationId: verifyEmail
+      summary: Consume a single-use email verification token
+      description: POST is required so link scanners cannot verify an account merely by opening the email URL.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationRequest'
+      responses:
+        '204':
+          description: Email verified. The token and every superseded token for the account are no longer usable.
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/auth/email/resend:
+    post:
+      tags: [Auth]
+      operationId: resendEmailVerification
+      summary: Request a replacement verification email
+      description: >-
+        Returns the same accepted response when the account is absent, already verified, or
+        eligible, preventing account enumeration.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailResendRequest'
+      responses:
+        '202':
+          description: Request accepted without revealing account state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptedResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/auth/refresh:
+    post:
+      tags: [Auth]
+      operationId: refreshTokens
+      summary: Rotate a refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Rotated refresh token and a new access token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logout
+      summary: Revoke one refresh token
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '204':
+          description: Refresh token revoked.
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/auth/logout-all:
+    post:
+      tags: [Auth]
+      operationId: logoutAll
+      summary: Revoke every refresh token for the current user
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: All refresh tokens revoked.
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/categories:
+    get:
+      tags: [Categories]
+      operationId: listCategories
+      summary: List active categories
+      responses:
+        '200':
+          description: Active categories in display order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryList'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      tags: [Categories]
+      operationId: createCategory
+      summary: Create a category
+      description: Administrator role is required.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryCreateRequest'
+      responses:
+        '201':
+          description: Category created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/categories/{identifier}:
+    parameters:
+      - $ref: '#/components/parameters/CategoryIdentifier'
+    get:
+      tags: [Categories]
+      operationId: getCategory
+      summary: Get an active category by ID or slug
+      responses:
+        '200':
+          description: Category details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      tags: [Categories]
+      operationId: updateCategory
+      summary: Update a category
+      description: Administrator role is required and `identifier` must be numeric.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryPatchRequest'
+      responses:
+        '200':
+          description: Updated category.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      tags: [Categories]
+      operationId: deleteCategory
+      summary: Deactivate a category
+      description: Administrator role is required and `identifier` must be numeric.
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Category deactivated.
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/listings:
+    get:
+      tags: [Listings]
+      operationId: listListings
+      summary: Browse listings
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - name: q
+          in: query
+          description: MySQL natural-language full-text search. `product_search` is accepted as a legacy alias.
+          schema:
+            type: string
+            maxLength: 120
+        - name: product_search
+          in: query
+          description: Legacy alias used only when `q` is empty.
+          schema:
+            type: string
+            maxLength: 120
+        - name: category
+          in: query
+          description: Category ID or slug.
+          schema:
+            type: string
+            maxLength: 100
+        - name: min_price
+          in: query
+          schema:
+            type: number
+            minimum: 0
+        - name: max_price
+          in: query
+          schema:
+            type: number
+            minimum: 0
+        - name: condition
+          in: query
+          schema:
+            $ref: '#/components/schemas/ItemCondition'
+        - name: location
+          in: query
+          schema:
+            type: string
+            maxLength: 120
+        - name: seller_id
+          in: query
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [newest, price-low, price-high]
+            default: newest
+        - $ref: '#/components/parameters/ListingsLimit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Matching listings. Anonymous callers see only active/approved items.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingPage'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      tags: [Listings]
+      operationId: createListing
+      summary: Create and screen a listing
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListingCreateRequest'
+      responses:
+        '201':
+          description: Listing created with its current moderation state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Listing'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/listings/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Listings]
+      operationId: getListing
+      summary: Get a listing
+      security:
+        - bearerAuth: []
+        - {}
+      responses:
+        '200':
+          description: Listing details. Non-public states are visible only to the seller or an admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Listing'
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      tags: [Listings]
+      operationId: updateListing
+      summary: Update and rescreen a listing
+      description: >-
+        The JSON body must include the `revision` from the latest listing
+        representation. Missing or zero revision returns 428. If another
+        mutation has advanced the listing revision, the stale update returns
+        409 and the client must reload before retrying.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListingUpdateRequest'
+      responses:
+        '200':
+          description: Updated listing and moderation state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Listing'
+        '409':
+          description: The listing changed while scam screening was running, so the stale update was rejected.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '428':
+          description: The request body omitted a positive current listing revision.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      tags: [Listings]
+      operationId: deleteListing
+      summary: Archive a listing
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Listing status changed to archived and vector deletion queued.
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/listings/{id}/status:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags: [Listings]
+      operationId: updateListingStatus
+      summary: Change listing status
+      description: >-
+        Activation requires moderation status approved. A seller cannot reactivate
+        a sold listing; an administrator can.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListingStatusRequest'
+      responses:
+        '200':
+          description: Listing with the new status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Listing'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/listings/{id}/images:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Listings]
+      operationId: listListingImages
+      summary: List images for a visible listing
+      description: >-
+        Non-public listing images are visible only to the seller, an admin, or
+        a moderator.
+      security:
+        - bearerAuth: []
+        - {}
+      responses:
+        '200':
+          description: Listing images in primary/sort order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingImageList'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      tags: [Listings]
+      operationId: addListingImage
+      summary: Import an external listing image (administrator only)
+      description: >-
+        Legacy/import endpoint restricted to administrators. Sellers use the
+        multipart local-storage endpoint so marketplace pages never depend on
+        third-party image hosts or leak visitor IP addresses to them.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImageInput'
+      responses:
+        '201':
+          description: Image created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingImage'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/listings/{id}/images/upload:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Listings]
+      operationId: uploadListingImage
+      summary: Upload a local listing image
+      description: >-
+        Available to the listing owner and administrators. The backend checks
+        JPEG, PNG, WebP, or GIF magic bytes against the filename extension,
+        enforces the configured size limit, generates a random immutable name,
+        and stores the file in server-local persistent storage. If sort_order
+        is omitted, the first free value is selected.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ListingImageUpload'
+            encoding:
+              image:
+                contentType: image/jpeg, image/png, image/webp, image/gif
+      responses:
+        '201':
+          description: Image durably stored and attached to the listing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingImage'
+        '413':
+          description: Image or multipart body exceeds the configured upload limit.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          description: File is empty, unsupported, mismatched, or metadata is invalid.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/listings/{id}/images/{imageId}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - $ref: '#/components/parameters/ImageId'
+    patch:
+      tags: [Listings]
+      operationId: updateListingImage
+      summary: Update listing image metadata
+      description: >-
+        Sellers may change sort_order and is_primary but cannot replace
+        image_url. Administrators may also provide an HTTP(S) URL for a legacy
+        import. To replace seller media, upload a new local image and delete the
+        old object.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListingImageUpdate'
+      responses:
+        '200':
+          description: Updated image.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingImage'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      tags: [Listings]
+      operationId: deleteListingImage
+      summary: Delete a listing image
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Image deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/listings/{id}/scam-assessments:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Listings]
+      operationId: assessListing
+      summary: Rerun scam screening
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: New assessment and updated listing moderation state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScamAssessment'
+        '409':
+          description: The listing changed while reassessment was running, so the stale moderation result was rejected.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/listings/{id}/scam-assessments/latest:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Listings]
+      operationId: getLatestScamAssessment
+      summary: Get the latest scam assessment
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Latest assessment for a listing owned by the caller or an admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScamAssessment'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/admin/listings/{id}/moderation:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags: [Listings]
+      operationId: moderateListing
+      summary: Set a listing moderation decision
+      description: Moderator or administrator role is required.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModerationRequest'
+      responses:
+        '200':
+          description: Listing with updated moderation and derived publication status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Listing'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/admin/listings:
+    get:
+      tags: [Listings]
+      operationId: listModerationQueue
+      summary: List listings by moderation state
+      description: Moderator or administrator role is required. The default moderation state is pending.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          description: MySQL natural-language full-text search over title, description, and brand.
+          schema:
+            type: string
+            maxLength: 120
+        - name: category
+          in: query
+          description: Category ID or slug.
+          schema:
+            type: string
+            maxLength: 100
+        - name: moderation_status
+          in: query
+          schema:
+            type: string
+            enum: [pending, review, rejected, approved, unavailable]
+            default: pending
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [newest, price-low, price-high]
+            default: newest
+        - $ref: '#/components/parameters/ModerationLimit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Matching moderation queue entries.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingPage'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/listings/{id}/similar:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - $ref: '#/components/parameters/SimilarLimit'
+    get:
+      tags: [Recommendations]
+      operationId: listSimilarListings
+      summary: Find similar active and approved listings
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Similar listings or degraded recent-listing fallback.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendationList'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/users/me:
+    get:
+      tags: [Users]
+      operationId: getCurrentUser
+      summary: Get the current private profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user with private account/profile fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      tags: [Users]
+      operationId: updateCurrentUser
+      summary: Update the current account and profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPatchRequest'
+      responses:
+        '200':
+          description: Updated current user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      tags: [Users]
+      operationId: deleteCurrentUser
+      summary: Privacy-delete the current account and owned listing media
+      description: >-
+        Locks the account and all owned listings, removes every server-local
+        listing upload directory before commit, deletes all owned
+        listing_images rows, archives listings, revokes sessions, and
+        anonymizes the account. A media cleanup failure aborts the database
+        transaction; cleanup is scoped to owned numeric listing IDs.
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Account anonymized, sessions revoked, and owned listing image rows/files removed.
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/users/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Users]
+      operationId: getPublicUser
+      summary: Get a public user profile
+      responses:
+        '200':
+          description: Public profile without email, role, status, or phone.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/users/me/favourites:
+    get:
+      tags: [Favourites]
+      operationId: listFavourites
+      summary: List saved listings
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/FavouritesLimit'
+      responses:
+        '200':
+          description: Saved active and approved listings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingList'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/users/me/favourites/{listingId}:
+    parameters:
+      - $ref: '#/components/parameters/ListingId'
+    put:
+      tags: [Favourites]
+      operationId: addFavourite
+      summary: Save a listing idempotently
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Listing is saved.
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      tags: [Favourites]
+      operationId: removeFavourite
+      summary: Remove a saved listing
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Listing is no longer saved.
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/users/me/cart:
+    get:
+      tags: [Cart]
+      operationId: getCart
+      summary: Get the current user's cart
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Cart with active and approved listing details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/users/me/cart/items/{listingId}:
+    parameters:
+      - $ref: '#/components/parameters/ListingId'
+    put:
+      tags: [Cart]
+      operationId: putCartItem
+      summary: Set a cart item quantity
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CartQuantityRequest'
+      responses:
+        '200':
+          description: Updated cart.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      tags: [Cart]
+      operationId: patchCartItem
+      summary: Set a cart item quantity
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CartQuantityRequest'
+      responses:
+        '200':
+          description: Updated cart.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      tags: [Cart]
+      operationId: removeCartItem
+      summary: Remove a listing from the cart
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Updated cart.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/users/me/cart/items:
+    delete:
+      tags: [Cart]
+      operationId: clearCart
+      summary: Clear the current user's cart
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Empty cart.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/conversations:
+    post:
+      tags: [Conversations]
+      operationId: createConversation
+      summary: Create or reuse a conversation for a listing
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationCreateRequest'
+      responses:
+        '201':
+          description: New or existing buyer/seller conversation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+        default:
+          $ref: '#/components/responses/Problem'
+    get:
+      tags: [Conversations]
+      operationId: listConversations
+      summary: List the current user's conversations
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Conversations ordered by recent activity.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationList'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/conversations/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Conversations]
+      operationId: getConversation
+      summary: Get a conversation as a member
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Conversation details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      tags: [Conversations]
+      operationId: leaveConversation
+      summary: Leave a conversation
+      description: Marks the current membership as left; the conversation is retained.
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Membership marked as left.
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/conversations/{id}/messages:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Conversations]
+      operationId: listMessages
+      summary: List messages in ascending order
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: before
+          in: query
+          description: Return message IDs below this cursor.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - $ref: '#/components/parameters/MessagesLimit'
+      responses:
+        '200':
+          description: Conversation messages.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      tags: [Conversations]
+      operationId: createMessage
+      summary: Send a message
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageRequest'
+      responses:
+        '201':
+          description: Message created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/conversations/{id}/messages/{messageId}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - $ref: '#/components/parameters/MessageId'
+    patch:
+      tags: [Conversations]
+      operationId: updateMessage
+      summary: Edit a message sent by the current user
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageRequest'
+      responses:
+        '200':
+          description: Updated message.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      tags: [Conversations]
+      operationId: deleteMessage
+      summary: Delete a message sent by the current user
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Message deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/recommendations:
+    get:
+      tags: [Recommendations]
+      operationId: listRecommendations
+      summary: Get query-based or personalized recommendations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          description: Preference text, limited to both 4,000 Unicode characters and 4,000 UTF-8 bytes. Authenticated favourites/cart are used when absent.
+          schema:
+            type: string
+            maxLength: 4000
+        - $ref: '#/components/parameters/RecommendationLimit'
+      responses:
+        '200':
+          description: Recommendations with semantic-search degradation signal.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendationList'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/assistant/chat:
+    post:
+      tags: [Assistant]
+      operationId: chatStateless
+      summary: Ask the stateless RAG shopping assistant
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssistantMessageRequest'
+      responses:
+        '200':
+          description: Grounded answer, sources, model, usage, and degradation state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistantResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/ai/chat/sessions:
+    post:
+      tags: [Assistant]
+      operationId: createChatSession
+      summary: Create a persisted assistant session
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatSessionCreateRequest'
+      responses:
+        '201':
+          description: Session created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIChatSession'
+        default:
+          $ref: '#/components/responses/Problem'
+    get:
+      tags: [Assistant]
+      operationId: listChatSessions
+      summary: List persisted assistant sessions
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Up to 100 sessions ordered by recent activity.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIChatSessionList'
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/ai/chat/sessions/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Assistant]
+      operationId: getChatSession
+      summary: Get an owned assistant session
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Session metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIChatSession'
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      tags: [Assistant]
+      operationId: updateChatSession
+      summary: Rename an owned assistant session
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatSessionUpdateRequest'
+      responses:
+        '200':
+          description: Updated session metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIChatSession'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      tags: [Assistant]
+      operationId: deleteChatSession
+      summary: Delete an owned assistant session and its messages
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Session deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/ai/chat/sessions/{id}/messages:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Assistant]
+      operationId: listChatMessages
+      summary: List persisted assistant messages
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/MessagesLimit'
+      responses:
+        '200':
+          description: Messages in ascending order with assistant sources.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIChatMessageList'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      tags: [Assistant]
+      operationId: createChatMessage
+      summary: Ask the assistant and persist the exchange
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssistantMessageRequest'
+      responses:
+        '201':
+          description: Persisted assistant message plus degradation state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIChatExchangeResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: HS256 access token issued by register, login, or refresh.
+
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    CategoryIdentifier:
+      name: identifier
+      in: path
+      required: true
+      description: Numeric category ID or slug for GET; numeric ID for PATCH/DELETE.
+      schema:
+        type: string
+        pattern: '^(?:[1-9][0-9]*|[a-z0-9]+(?:-[a-z0-9]+)*)$'
+    ListingId:
+      name: listingId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    ImageId:
+      name: imageId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    MessageId:
+      name: messageId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    ListingsLimit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    RecommendationLimit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 20
+    ModerationLimit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    SimilarLimit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 10
+    FavouritesLimit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    MessagesLimit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    Offset:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 10000
+        default: 0
+
+  responses:
+    Problem:
+      description: Error response. Typical statuses are 400, 401, 403, 404, 409, 422, 428, 500, or 503.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+  schemas:
+    Liveness:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          const: ok
+
+    Readiness:
+      type: object
+      additionalProperties: false
+      required: [status, components]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        components:
+          type: object
+          additionalProperties: false
+          required: [mysql, ml, qdrant, embeddings, qwen, google_oauth, email_delivery]
+          properties:
+            mysql:
+              type: string
+              enum: [ok, unavailable]
+            ml:
+              type: string
+              enum: [ok, unavailable]
+            qdrant:
+              type: string
+              enum: [ok, unavailable]
+            embeddings:
+              type: string
+              enum: [enabled_unverified, disabled]
+            qwen:
+              type: string
+              enum: [enabled_unverified, disabled]
+            google_oauth:
+              type: string
+              enum: [enabled, disabled]
+            email_delivery:
+              type: string
+              enum: [enabled_unverified, disabled]
+
+    Problem:
+      type: object
+      additionalProperties: false
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: string
+
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [username, email, password]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          pattern: '^[A-Za-z0-9][A-Za-z0-9_.-]{2,49}$'
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 72
+          writeOnly: true
+
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        username:
+          type: string
+          description: Accepted by the decoder but ignored during login.
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          writeOnly: true
+
+    GoogleAuthRequest:
+      type: object
+      additionalProperties: false
+      required: [code, code_verifier, redirect_uri]
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          writeOnly: true
+        code_verifier:
+          type: string
+          minLength: 43
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._~-]{43,128}$'
+          writeOnly: true
+        redirect_uri:
+          type: string
+          format: uri
+          description: Must exactly equal a backend GOOGLE_REDIRECT_URIS entry.
+
+    EmailVerificationRequest:
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token:
+          type: string
+          minLength: 90
+          maxLength: 90
+          description: Versioned HMAC-signed opaque token; stored only as a SHA-256 hash.
+          writeOnly: true
+
+    EmailResendRequest:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+
+    VerificationPendingResponse:
+      type: object
+      additionalProperties: false
+      required: [status, email]
+      properties:
+        status:
+          type: string
+          const: verification_required
+        email:
+          type: string
+          format: email
+
+    AcceptedResponse:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          const: accepted
+
+    RefreshTokenRequest:
+      type: object
+      additionalProperties: false
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+          minLength: 1
+          writeOnly: true
+
+    TokenResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - access_token
+        - token_type
+        - expires_at
+        - refresh_token
+        - refresh_expires_at
+        - user
+      properties:
+        access_token:
+          type: string
+          readOnly: true
+        token_type:
+          type: string
+          const: Bearer
+        expires_at:
+          type: string
+          format: date-time
+        refresh_token:
+          type: string
+          readOnly: true
+        refresh_expires_at:
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/User'
+
+    UserPatchRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          pattern: '^[A-Za-z0-9][A-Za-z0-9_.-]{2,49}$'
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          description: Must equal the current email; changes require a future dedicated verification flow.
+        full_name:
+          type: string
+          maxLength: 100
+        phone:
+          type: string
+          maxLength: 32
+        location:
+          type: string
+          maxLength: 120
+        bio:
+          type: string
+          maxLength: 2000
+        profile_image:
+          type: string
+          maxLength: 1024
+
+    CategoryCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [name, slug]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        slug:
+          type: string
+          maxLength: 100
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        is_active:
+          type: boolean
+          description: Accepted but ignored on creation; new categories are active.
+
+    CategoryPatchRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        slug:
+          type: string
+          maxLength: 100
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        is_active:
+          type: boolean
+
+    ListingCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [category_id, title, item_condition]
+      properties:
+        category_id:
+          type: integer
+          format: int64
+          minimum: 1
+        title:
+          type: string
+          minLength: 1
+          maxLength: 150
+        description:
+          type: string
+          maxLength: 10000
+          default: ''
+        brand:
+          type: string
+          maxLength: 100
+          default: ''
+        location:
+          type: string
+          maxLength: 120
+          default: ''
+        price:
+          type: number
+          minimum: 0
+          maximum: 99999999.99
+          default: 0
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          default: SGD
+        item_condition:
+          $ref: '#/components/schemas/ItemCondition'
+        images:
+          type: array
+          maxItems: 10
+          description: Administrator-only legacy import. Sellers must omit this field and use multipart uploads after creation.
+          items:
+            $ref: '#/components/schemas/ImageInput'
+          default: []
+
+    ListingUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [revision]
+      properties:
+        revision:
+          type: integer
+          format: int64
+          minimum: 1
+          writeOnly: true
+          description: Current revision copied from the latest Listing representation.
+        category_id:
+          type: integer
+          format: int64
+          minimum: 1
+        title:
+          type: string
+          minLength: 1
+          maxLength: 150
+        description:
+          type: string
+          maxLength: 10000
+        brand:
+          type: string
+          maxLength: 100
+        location:
+          type: string
+          maxLength: 120
+        price:
+          type: number
+          minimum: 0
+          maximum: 99999999.99
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        item_condition:
+          $ref: '#/components/schemas/ItemCondition'
+        images:
+          type: array
+          maxItems: 10
+          description: Administrator-only legacy import. Sellers cannot mutate this field.
+          items:
+            $ref: '#/components/schemas/ImageInput'
+
+    ListingStatusRequest:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [active, sold, archived]
+
+    ModerationRequest:
+      type: object
+      additionalProperties: false
+      required: [moderation_status]
+      properties:
+        moderation_status:
+          type: string
+          enum: [approved, rejected, review]
+
+    ImageInput:
+      type: object
+      additionalProperties: false
+      required: [image_url]
+      properties:
+        image_url:
+          type: string
+          format: uri
+          maxLength: 1024
+          pattern: '^https?://'
+        sort_order:
+          type: integer
+          minimum: 0
+          maximum: 1000
+          default: 0
+        is_primary:
+          type: boolean
+          default: false
+
+    ListingImageUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        image_url:
+          type: string
+          format: uri
+          maxLength: 1024
+          pattern: '^https?://'
+          description: Administrator-only legacy replacement; sellers omit it or repeat the unchanged current value.
+        sort_order:
+          type: integer
+          minimum: 0
+          maximum: 1000
+          default: 0
+        is_primary:
+          type: boolean
+          default: false
+
+    ListingImageUpload:
+      type: object
+      additionalProperties: false
+      required: [image]
+      properties:
+        image:
+          type: string
+          format: binary
+        sort_order:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        is_primary:
+          type: boolean
+          default: false
+
+    CartQuantityRequest:
+      type: object
+      additionalProperties: false
+      required: [quantity]
+      properties:
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 99
+
+    ConversationCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [listing_id]
+      properties:
+        listing_id:
+          type: integer
+          format: int64
+          minimum: 1
+
+    MessageRequest:
+      type: object
+      additionalProperties: false
+      required: [message_text]
+      properties:
+        message_text:
+          type: string
+          minLength: 1
+          maxLength: 5000
+
+    AssistantMessageRequest:
+      type: object
+      additionalProperties: false
+      required: [message]
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: Limited to both 4,000 Unicode characters and 4,000 UTF-8 bytes.
+
+    ChatSessionCreateRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          maxLength: 160
+          default: Shopping assistant
+
+    ChatSessionUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 160
+
+    ItemCondition:
+      type: string
+      enum: [new, like_new, good, fair]
+
+    Profile:
+      type: object
+      additionalProperties: false
+      required: [user_id, full_name, phone, location, bio, profile_image, updated_at]
+      properties:
+        user_id:
+          type: integer
+          format: int64
+        full_name:
+          type: string
+        phone:
+          type: string
+          description: Empty in public-user responses.
+        location:
+          type: string
+        bio:
+          type: string
+        profile_image:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+
+    User:
+      type: object
+      additionalProperties: false
+      required: [user_id, username, email_verified, created_at]
+      properties:
+        user_id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+          description: Present only in private-user responses.
+        email_verified:
+          type: boolean
+          description: False in public-user responses; authoritative in private/session responses.
+        role:
+          type: string
+          enum: [user, moderator, admin]
+          description: Omitted in public-user responses.
+        status:
+          type: string
+          enum: [active, suspended, deleted]
+          description: Omitted in public-user responses.
+        created_at:
+          type: string
+          format: date-time
+        profile:
+          $ref: '#/components/schemas/Profile'
+
+    Category:
+      type: object
+      additionalProperties: false
+      required: [category_id, name, slug, is_active, created_at]
+      properties:
+        category_id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        slug:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    ListingImage:
+      type: object
+      additionalProperties: false
+      required: [image_id, listing_id, image_url, sort_order, is_primary]
+      properties:
+        image_id:
+          type: integer
+          format: int64
+        listing_id:
+          type: integer
+          format: int64
+        image_url:
+          type: string
+          format: uri-reference
+          maxLength: 1024
+          description: Usually a same-origin `/media/...` URL; legacy administrator imports may be absolute.
+        sort_order:
+          type: integer
+          minimum: 0
+        is_primary:
+          type: boolean
+
+    Listing:
+      type: object
+      additionalProperties: false
+      required:
+        - listing_id
+        - seller_id
+        - category_id
+        - title
+        - description
+        - brand
+        - location
+        - price
+        - currency
+        - item_condition
+        - status
+        - moderation_status
+        - created_at
+        - updated_at
+        - revision
+        - images
+      properties:
+        listing_id:
+          type: integer
+          format: int64
+        seller_id:
+          type: integer
+          format: int64
+        category_id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        description:
+          type: string
+        brand:
+          type: string
+        location:
+          type: string
+        price:
+          type: number
+          minimum: 0
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        item_condition:
+          $ref: '#/components/schemas/ItemCondition'
+        status:
+          type: string
+          enum: [draft, under_review, active, reserved, sold, archived, deleted]
+        moderation_status:
+          type: string
+          enum: [pending, approved, rejected, review, unavailable]
+        scam_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        scam_label:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        revision:
+          type: integer
+          format: int64
+          minimum: 1
+          readOnly: true
+          description: Monotonically increasing listing revision used to reject stale concurrent ML updates.
+        category:
+          $ref: '#/components/schemas/Category'
+        seller:
+          $ref: '#/components/schemas/User'
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ListingImage'
+        similarity_score:
+          type: number
+
+    ScamAssessment:
+      type: object
+      additionalProperties: false
+      required:
+        - assessment_id
+        - score
+        - label
+        - reasons
+        - model_version
+        - created_at
+      properties:
+        assessment_id:
+          type: integer
+          format: int64
+        listing_id:
+          type: integer
+          format: int64
+        score:
+          type: number
+          minimum: 0
+          maximum: 1
+        label:
+          type: string
+          enum: [low_risk, needs_review, high_risk]
+        reasons:
+          type: array
+          items:
+            type: string
+        model_version:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    CartItem:
+      type: object
+      additionalProperties: false
+      required: [listing, quantity]
+      properties:
+        listing:
+          $ref: '#/components/schemas/Listing'
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 99
+
+    Cart:
+      type: object
+      additionalProperties: false
+      required: [cart_id, user_id, items, created_at, updated_at]
+      properties:
+        cart_id:
+          type: integer
+          format: int64
+        user_id:
+          type: integer
+          format: int64
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Conversation:
+      type: object
+      additionalProperties: false
+      required: [conversation_id, listing_id, buyer_id, seller_id, created_at, updated_at, members]
+      properties:
+        conversation_id:
+          type: integer
+          format: int64
+        listing_id:
+          type: integer
+          format: int64
+        buyer_id:
+          type: integer
+          format: int64
+        seller_id:
+          type: integer
+          format: int64
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationMember'
+        last_message:
+          $ref: '#/components/schemas/Message'
+
+    ConversationMember:
+      type: object
+      additionalProperties: false
+      required: [user, role, joined_at]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        role:
+          type: string
+          enum: [buyer, seller]
+        joined_at:
+          type: string
+          format: date-time
+
+    Message:
+      type: object
+      additionalProperties: false
+      required: [message_id, conversation_id, sender_id, message_text, created_at]
+      properties:
+        message_id:
+          type: integer
+          format: int64
+        conversation_id:
+          type: integer
+          format: int64
+        sender_id:
+          type: integer
+          format: int64
+        message_text:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    ChatSource:
+      type: object
+      additionalProperties: false
+      required: [listing_id, title, price, currency, score]
+      properties:
+        listing_id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        price:
+          type: number
+        currency:
+          type: string
+        score:
+          type: number
+
+    TokenUsage:
+      type: object
+      additionalProperties: false
+      required: [prompt_tokens, completion_tokens, total_tokens]
+      properties:
+        prompt_tokens:
+          type: integer
+          minimum: 0
+        completion_tokens:
+          type: integer
+          minimum: 0
+        total_tokens:
+          type: integer
+          minimum: 0
+        cached_tokens:
+          type: integer
+          minimum: 0
+
+    AssistantResponse:
+      type: object
+      additionalProperties: false
+      required: [answer, sources, model, degraded, usage]
+      properties:
+        answer:
+          type: string
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatSource'
+        model:
+          type: string
+        degraded:
+          type: boolean
+        warning:
+          type: string
+        usage:
+          $ref: '#/components/schemas/TokenUsage'
+
+    AIChatSession:
+      type: object
+      additionalProperties: false
+      required: [session_id, user_id, title, created_at, updated_at]
+      properties:
+        session_id:
+          type: integer
+          format: int64
+        user_id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AIChatMessage:
+      type: object
+      additionalProperties: false
+      required: [message_id, session_id, role, content, created_at]
+      properties:
+        message_id:
+          type: integer
+          format: int64
+        session_id:
+          type: integer
+          format: int64
+        role:
+          type: string
+          enum: [system, user, assistant, tool]
+        content:
+          type: string
+        model:
+          type: string
+        prompt_tokens:
+          type: integer
+          minimum: 0
+        completion_tokens:
+          type: integer
+          minimum: 0
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatSource'
+        created_at:
+          type: string
+          format: date-time
+
+    CategoryList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+
+    ListingList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Listing'
+
+    ListingImageList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ListingImage'
+
+    ListingPage:
+      type: object
+      additionalProperties: false
+      required: [items, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Listing'
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    RecommendationList:
+      type: object
+      additionalProperties: false
+      required: [items, degraded]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Listing'
+        degraded:
+          type: boolean
+
+    ConversationList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Conversation'
+
+    MessageList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+
+    AIChatSessionList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AIChatSession'
+
+    AIChatMessageList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AIChatMessage'
+
+    AIChatExchangeResponse:
+      type: object
+      additionalProperties: false
+      required: [message, degraded, warning]
+      properties:
+        message:
+          $ref: '#/components/schemas/AIChatMessage'
+        degraded:
+          type: boolean
+        warning:
+          type: string

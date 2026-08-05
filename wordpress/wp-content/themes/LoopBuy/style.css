@@ -3171,15 +3171,25 @@ html.dark-mode .theme-toggle,
 	border-top: 1px solid var(--loopbuy-border);
 }
 
+.loopbuy-user-dropdown-logout-form {
+	margin: 0;
+}
+
 .loopbuy-user-dropdown-logout {
 	display: flex;
 	align-items: center;
 	gap: 12px;
+	width: 100%;
 	padding: 10px;
+	border: 0;
 	border-radius: 10px;
+	background: transparent;
 	color: #d6483a;
+	font-family: inherit;
 	font-weight: 600;
 	font-size: 0.92rem;
+	text-align: left;
+	cursor: pointer;
 	transition: background 0.15s ease;
 }
 
@@ -5499,6 +5509,68 @@ html.dark-mode .theme-toggle,
 	color: #b91c1c;
 }
 
+.login-success {
+	border: 1px solid #bbf7d0;
+	background: #f0fdf4;
+	color: #166534;
+}
+
+.loopbuy-google-link {
+	text-decoration: none;
+}
+
+.google-login-button:disabled,
+.google-register-button:disabled,
+.login-submit-button:disabled,
+.register-submit-button:disabled,
+.loopbuy-secondary-auth-button:disabled {
+	cursor: not-allowed;
+	opacity: 0.58;
+}
+
+.loopbuy-verification-panel,
+.loopbuy-resend-panel {
+	margin-top: 24px;
+	padding: 20px;
+	border: 1px solid #dce3ed;
+	border-radius: 10px;
+	background: #f8fafc;
+}
+
+.loopbuy-verification-panel {
+	margin-top: 0;
+}
+
+.loopbuy-verification-panel h2,
+.loopbuy-resend-panel h2 {
+	margin: 0 0 8px;
+	color: #1f2937;
+	font-size: 1rem;
+}
+
+.loopbuy-verification-panel p {
+	margin: 0 0 16px;
+	color: #64748b;
+	font-size: 0.9rem;
+	line-height: 1.55;
+}
+
+.loopbuy-secondary-auth-button {
+	min-height: 44px;
+	padding: 10px 16px;
+	border: 1px solid #73809b;
+	border-radius: 6px;
+	background: #ffffff;
+	color: #596985;
+	font: inherit;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.loopbuy-secondary-auth-button:hover {
+	background: #eef2f7;
+}
+
 @media (max-width: 600px) {
 	.loopbuy-login-page {
 		padding: 35px 16px 50px;
@@ -5510,6 +5582,86 @@ html.dark-mode .theme-toggle,
 
 	.login-heading {
 		margin-bottom: 25px;
+	}
+}
+
+/* Legal pages used by OAuth consent and the public beta. */
+.loopbuy-legal-page {
+	min-height: 70vh;
+	padding: 64px 20px 80px;
+	background: #f7f9fc;
+}
+
+.loopbuy-legal-card {
+	width: min(880px, 100%);
+	margin: 0 auto;
+	padding: 48px;
+	border: 1px solid #e2e8f0;
+	border-radius: 18px;
+	background: #ffffff;
+	box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+}
+
+.loopbuy-legal-header {
+	padding-bottom: 28px;
+	border-bottom: 1px solid #e2e8f0;
+}
+
+.loopbuy-legal-eyebrow {
+	margin: 0 0 10px;
+	color: #60718e;
+	font-size: 0.78rem;
+	font-weight: 800;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+}
+
+.loopbuy-legal-card h1 {
+	margin: 0 0 12px;
+	color: #172033;
+	font-size: clamp(2rem, 4vw, 3rem);
+	line-height: 1.1;
+}
+
+.loopbuy-legal-card section {
+	padding-top: 28px;
+	scroll-margin-top: 100px;
+}
+
+.loopbuy-legal-card h2 {
+	margin: 0 0 10px;
+	color: #27364f;
+	font-size: 1.22rem;
+}
+
+.loopbuy-legal-card p {
+	margin: 0;
+	color: #526076;
+	font-size: 1rem;
+	line-height: 1.75;
+}
+
+.loopbuy-legal-card a {
+	color: #536987;
+	font-weight: 700;
+}
+
+.loopbuy-legal-note {
+	margin-top: 34px !important;
+	padding: 16px 18px;
+	border-left: 4px solid #7b8daa;
+	background: #f3f6fa;
+	font-size: 0.9rem !important;
+}
+
+@media (max-width: 600px) {
+	.loopbuy-legal-page {
+		padding: 30px 14px 50px;
+	}
+
+	.loopbuy-legal-card {
+		padding: 28px 20px;
+		border-radius: 12px;
 	}
 }
 

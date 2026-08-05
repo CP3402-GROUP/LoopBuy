@@ -2,6 +2,12 @@ services:
   wordpress:
     image: wordpress:php8.3-apache
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /run:size=16m,mode=0755
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       wordpress-db:
         condition: service_healthy
@@ -13,11 +19,21 @@ services:
       WORDPRESS_DB_USER: ${WORDPRESS_DB_USER:-wordpress}
       WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD:?Set WORDPRESS_DB_PASSWORD in .env}
       WORDPRESS_DEBUG: ${WORDPRESS_DEBUG:-1}
+      WORDPRESS_CONFIG_EXTRA: |
+        define( 'DISALLOW_FILE_EDIT', true );
+        define( 'DISALLOW_FILE_MODS', true );
+      LOOPBUY_BACKEND_URL: http://api:8080
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      BFF_SHARED_SECRET: ${BFF_SHARED_SECRET:-}
     volumes:
       - wordpress_core_data:/var/www/html
-      - ./wordpress/wp-content:/var/www/html/wp-content
+      - ./wordpress/wp-content/themes/LoopBuy:/var/www/html/wp-content/themes/LoopBuy:ro
+      - ./wordpress/wp-content/mu-plugins:/var/www/html/wp-content/mu-plugins:ro
+      - wordpress_uploads_data:/var/www/html/wp-content/uploads
+      - ./wordpress/php/loopbuy-uploads.ini:/usr/local/etc/php/conf.d/loopbuy-uploads.ini:ro
     networks:
       - wordpress-internal
+      - loopbuy-app
 
   wordpress-db:
     image: mariadb:11.4
@@ -38,10 +54,150 @@ services:
     networks:
       - wordpress-internal
 
+  api:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      backend-db:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+      ml:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${API_PORT:-8090}:8080"
+    environment:
+      HTTP_ADDR: :8080
+      BACKEND_DB_HOST: backend-db
+      BACKEND_DB_PORT: 3306
+      BACKEND_DB_NAME: ${BACKEND_DB_NAME:-loopbuy_backend}
+      BACKEND_DB_USER: ${BACKEND_DB_USER:-loopbuy}
+      BACKEND_DB_PASSWORD: ${BACKEND_DB_PASSWORD:-loopbuy-local-only}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (at least 32 characters)}
+      ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-15m}
+      REFRESH_TOKEN_TTL: ${REFRESH_TOKEN_TTL:-720h}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:8080}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URIS: ${GOOGLE_REDIRECT_URIS:-}
+      BFF_SHARED_SECRET: ${BFF_SHARED_SECRET:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_BASE_URL: ${RESEND_BASE_URL:-https://api.resend.com}
+      RESEND_FROM: ${RESEND_FROM:-}
+      RESEND_MAX_EMAILS_PER_HOUR: ${RESEND_MAX_EMAILS_PER_HOUR:-100}
+      EMAIL_VERIFICATION_URL: ${EMAIL_VERIFICATION_URL:-}
+      EMAIL_VERIFICATION_TTL: ${EMAIL_VERIFICATION_TTL:-24h}
+      MEDIA_STORAGE_ROOT: /var/lib/loopbuy/media
+      MEDIA_PUBLIC_BASE_URL: ${MEDIA_PUBLIC_BASE_URL:-/media}
+      MEDIA_MAX_UPLOAD_BYTES: ${MEDIA_MAX_UPLOAD_BYTES:-8388608}
+      DEMO_SEED_ENABLED: ${DEMO_SEED_ENABLED:-true}
+      DEMO_MEDIA_SOURCE_DIR: /opt/loopbuy/demo-media
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com}
+      OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      OPENAI_EMBEDDING_DIMENSIONS: ${OPENAI_EMBEDDING_DIMENSIONS:-1536}
+      OPENAI_MAX_REQUESTS_PER_HOUR: ${OPENAI_MAX_REQUESTS_PER_HOUR:-300}
+      OPENAI_MAX_REQUESTS_PER_USER_DAY: ${OPENAI_MAX_REQUESTS_PER_USER_DAY:-20}
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-loopbuy-qdrant-local-only}
+      QDRANT_COLLECTION: ${QDRANT_COLLECTION:-loopbuy_listings_v1}
+      QDRANT_VECTOR_NAME: ${QDRANT_VECTOR_NAME:-listing_text_v1}
+      ML_SERVICE_URL: http://ml:8000
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      QWEN_API_KEY: ${QWEN_API_KEY:-}
+      QWEN_BASE_URL: ${QWEN_BASE_URL:-}
+      QWEN_MODEL: ${QWEN_MODEL:-qwen3.7-plus}
+      QWEN_MAX_REQUESTS_PER_HOUR: ${QWEN_MAX_REQUESTS_PER_HOUR:-100}
+      QWEN_MAX_REQUESTS_PER_USER_DAY: ${QWEN_MAX_REQUESTS_PER_USER_DAY:-10}
+      AI_CHAT_FALLBACK_ENABLED: ${AI_CHAT_FALLBACK_ENABLED:-true}
+      OUTBOX_POLL_INTERVAL: ${OUTBOX_POLL_INTERVAL:-2s}
+    volumes:
+      - listing_media_data:/var/lib/loopbuy/media
+      - ./wordpress/wp-content/themes/LoopBuy/images:/opt/loopbuy/demo-media:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8080/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks:
+      - loopbuy-app
+      - backend-internal
+
+  backend-db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${BACKEND_DB_NAME:-loopbuy_backend}
+      MYSQL_USER: ${BACKEND_DB_USER:-loopbuy}
+      MYSQL_PASSWORD: ${BACKEND_DB_PASSWORD:-loopbuy-local-only}
+      MYSQL_ROOT_PASSWORD: ${BACKEND_DB_ROOT_PASSWORD:-loopbuy-root-local-only}
+      TZ: UTC
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci", "--default-time-zone=+00:00"]
+    volumes:
+      - backend_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$${MYSQL_USER} -p$${MYSQL_PASSWORD} --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    networks:
+      - backend-internal
+
+  qdrant:
+    image: qdrant/qdrant:v1.18.0
+    restart: unless-stopped
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:-loopbuy-qdrant-local-only}
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - backend-internal
+
+  ml:
+    build:
+      context: ./ml-service
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks:
+      - backend-internal
+
 networks:
   wordpress-internal:
     driver: bridge
+  loopbuy-app:
+    driver: bridge
+  backend-internal:
+    driver: bridge
+    internal: true
 
 volumes:
   wordpress_core_data:
+  wordpress_uploads_data:
   wordpress_db_data:
+  backend_db_data:
+  qdrant_data:
+  listing_media_data:

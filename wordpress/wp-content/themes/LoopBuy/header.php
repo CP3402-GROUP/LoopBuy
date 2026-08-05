@@ -17,6 +17,12 @@
 // page-cart.php and page-product-detail.php's "Add to Cart" button.
 // Since this data lives in the browser (works for guests too), the counts
 // below are filled in by JS on load rather than rendered from PHP.
+$loopbuy_marketplace_user = function_exists( 'loopbuy_marketplace_current_user' )
+	? loopbuy_marketplace_current_user()
+	: new WP_Error( 'loopbuy_marketplace_bridge_unavailable', __( 'Marketplace account service is unavailable.', 'loopbuy' ) );
+$loopbuy_marketplace_csrf = is_array( $loopbuy_marketplace_user ) && function_exists( 'loopbuy_marketplace_csrf_token' )
+	? loopbuy_marketplace_csrf_token()
+	: null;
 ?>
 
 <!doctype html>
@@ -377,6 +383,48 @@
 				</a>
 
 
+				<!-- AI shopping assistant -->
+
+				<a
+					href="<?php echo esc_url( home_url( '/ai-assistant/' ) ); ?>"
+					class="header-icon-link loopbuy-ai-header-link"
+				>
+
+					<svg
+						width="19"
+						height="19"
+						viewBox="0 0 24 24"
+						fill="none"
+						xmlns="http://www.w3.org/2000/svg"
+						aria-hidden="true"
+					>
+						<path
+							d="M12 3l1.15 3.35L16.5 7.5l-3.35 1.15L12 12l-1.15-3.35L7.5 7.5l3.35-1.15L12 3Z"
+							stroke="currentColor"
+							stroke-width="1.7"
+							stroke-linejoin="round"
+						/>
+						<path
+							d="M18.5 12l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z"
+							stroke="currentColor"
+							stroke-width="1.7"
+							stroke-linejoin="round"
+						/>
+						<path
+							d="M7 13l1 2.75 2.75 1L8 17.75 7 20.5 6 17.75l-2.75-1 2.75-1L7 13Z"
+							stroke="currentColor"
+							stroke-width="1.7"
+							stroke-linejoin="round"
+						/>
+					</svg>
+
+					<span class="header-icon-label">
+						<?php esc_html_e( 'AI Finder', 'loopbuy' ); ?>
+					</span>
+
+				</a>
+
+
 				<!-- Chat -->
 
 				<a
@@ -401,7 +449,7 @@
 					</svg>
 
 					<span class="header-icon-label">
-						<?php esc_html_e( 'Chat', 'loopbuy' ); ?>
+						<?php esc_html_e( 'Messages', 'loopbuy' ); ?>
 					</span>
 
 				</a>
@@ -411,22 +459,23 @@
 				     USER ACCOUNT
 				=========================================== -->
 
-				<?php if ( is_user_logged_in() ) : ?>
+				<?php if ( is_array( $loopbuy_marketplace_user ) ) : ?>
 
 					<?php
-					$loopbuy_current_user = wp_get_current_user();
-
-					$loopbuy_user_name =
-						$loopbuy_current_user->display_name
-						? $loopbuy_current_user->display_name
-						: $loopbuy_current_user->user_login;
+					$loopbuy_user_profile = isset( $loopbuy_marketplace_user['profile'] ) && is_array( $loopbuy_marketplace_user['profile'] )
+						? $loopbuy_marketplace_user['profile']
+						: array();
+					$loopbuy_user_name    = ! empty( $loopbuy_user_profile['full_name'] )
+						? $loopbuy_user_profile['full_name']
+						: $loopbuy_marketplace_user['username'];
 
 					$loopbuy_user_initial = strtoupper(
-						substr(
+						function_exists( 'mb_substr' ) ? mb_substr(
 							$loopbuy_user_name,
 							0,
-							1
-						)
+							1,
+							'UTF-8'
+						) : substr( $loopbuy_user_name, 0, 1 )
 					);
 					?>
 
@@ -463,7 +512,7 @@
 								</p>
 
 								<p class="loopbuy-user-dropdown-email">
-									<?php echo esc_html( $loopbuy_current_user->user_email ); ?>
+									<?php echo esc_html( $loopbuy_marketplace_user['email'] ); ?>
 								</p>
 
 							</div>
@@ -628,11 +677,21 @@
 
 							<div class="loopbuy-user-dropdown-footer">
 
-								<a
-									href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>"
-									class="loopbuy-user-dropdown-logout"
-									role="menuitem"
+								<form
+									method="post"
+									action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
+									class="loopbuy-user-dropdown-logout-form"
 								>
+									<input type="hidden" name="action" value="loopbuy_marketplace_logout">
+									<?php if ( is_string( $loopbuy_marketplace_csrf ) ) : ?>
+										<input type="hidden" name="loopbuy_marketplace_csrf" value="<?php echo esc_attr( $loopbuy_marketplace_csrf ); ?>">
+									<?php endif; ?>
+									<button
+										type="submit"
+										class="loopbuy-user-dropdown-logout"
+										role="menuitem"
+										<?php disabled( is_wp_error( $loopbuy_marketplace_csrf ) || ! is_string( $loopbuy_marketplace_csrf ) ); ?>
+									>
 
 									<svg
 										width="18"
@@ -652,13 +711,24 @@
 
 									<?php esc_html_e( 'Log out', 'loopbuy' ); ?>
 
-								</a>
+									</button>
+								</form>
 
 							</div>
 
 						</div>
 
 					</div>
+
+				<?php elseif ( is_wp_error( $loopbuy_marketplace_user ) ) : ?>
+
+					<a
+						href="<?php echo esc_url( home_url( '/profile/' ) ); ?>"
+						class="auth-link"
+						title="<?php echo esc_attr( $loopbuy_marketplace_user->get_error_message() ); ?>"
+					>
+						<?php esc_html_e( 'Account unavailable', 'loopbuy' ); ?>
+					</a>
 
 				<?php else : ?>
 
@@ -875,7 +945,7 @@
 			     USER DROPDOWN JAVASCRIPT
 			=========================================== -->
 
-			<?php if ( is_user_logged_in() ) : ?>
+			<?php if ( is_array( $loopbuy_marketplace_user ) ) : ?>
 
 				<script>
 				(function () {
