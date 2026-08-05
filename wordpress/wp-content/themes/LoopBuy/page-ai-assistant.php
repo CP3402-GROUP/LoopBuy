@@ -531,6 +531,7 @@ $loopbuy_register_url       = home_url( '/register/' );
 						if (data.degraded === true) {
 							appendDegradedNotice(answer, typeof data.warning === 'string' ? data.warning : '');
 						}
+						scrollMessages();
 						setStatus('<?php echo esc_js( __( 'LoopBuy Finder answered with listing sources.', 'loopbuy' ) ); ?>');
 					} catch (error) {
 						if (loading.isConnected) {
