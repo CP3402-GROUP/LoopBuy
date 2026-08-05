@@ -139,7 +139,7 @@ Replace all `change-*` and `replace-*` placeholders. Never commit `.env`. `JWT_S
 | `QWEN_BASE_URL` | `https://dashscope-intl.aliyuncs.com/compatible-mode/v1` | Optional region-specific OpenAI-compatible API override. China/Beijing and US/Virginia keys require their matching regional endpoint. |
 | `QWEN_MODEL` | `qwen3.5-flash` | Qwen model identifier. |
 | `QWEN_MAX_REQUESTS_PER_HOUR` | `100` | MySQL-backed global hourly Qwen completion cap shared by all API replicas. |
-| `QWEN_MAX_REQUESTS_PER_USER_DAY` | `10` | Per-user daily Qwen completion cap. |
+| `QWEN_MAX_REQUESTS_PER_USER_DAY` | `50` | Per-user daily Qwen completion cap. |
 | `AI_CHAT_FALLBACK_ENABLED` | `true` | Allows deterministic listing results when Qwen is absent or fails. |
 | `OUTBOX_POLL_INTERVAL` | `2s` | Go duration between indexer drains. |
 

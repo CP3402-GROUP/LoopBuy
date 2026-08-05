@@ -79,7 +79,7 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	qwenMaxRequestsUserDay, err := providerRequestLimit("QWEN_MAX_REQUESTS_PER_USER_DAY", 10)
+	qwenMaxRequestsUserDay, err := providerRequestLimit("QWEN_MAX_REQUESTS_PER_USER_DAY", 50)
 	if err != nil {
 		return Config{}, err
 	}
