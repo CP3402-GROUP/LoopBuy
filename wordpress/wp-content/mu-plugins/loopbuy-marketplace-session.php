@@ -602,6 +602,16 @@ function loopbuy_marketplace_register_rest_routes() {
 			'permission_callback' => '__return_true',
 		)
 	);
+
+	register_rest_route(
+		'loopbuy/v1',
+		'/assistant/chat',
+		array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'callback'            => 'loopbuy_marketplace_assistant_chat',
+			'permission_callback' => '__return_true',
+		)
+	);
 }
 
 add_action( 'rest_api_init', 'loopbuy_marketplace_register_rest_routes' );
@@ -1046,6 +1056,218 @@ function loopbuy_marketplace_authenticated_request( $method, $path, $payload = n
 		return new WP_Error( 'loopbuy_marketplace_session_expired', __( 'Your marketplace session has expired. Please log in again.', 'loopbuy' ) );
 	}
 
+	return $response;
+}
+
+/**
+ * Return a bounded RFC 9457-style REST error without exposing backend details.
+ *
+ * @param int    $status HTTP status.
+ * @param string $code   Stable local problem identifier.
+ * @param string $title  Short public title.
+ * @param string $detail Public detail.
+ * @return WP_REST_Response
+ */
+function loopbuy_marketplace_assistant_problem( $status, $code, $title, $detail ) {
+	$status = (int) $status;
+
+	if ( $status < 400 || $status > 599 ) {
+		$status = 502;
+	}
+
+	$code = sanitize_key( (string) $code );
+
+	if ( '' === $code ) {
+		$code = 'assistant-request-failed';
+	}
+
+	$response = new WP_REST_Response(
+		array(
+			'type'     => home_url( '/problems/' . $code ),
+			'title'    => sanitize_text_field( (string) $title ),
+			'status'   => $status,
+			'detail'   => sanitize_text_field( (string) $detail ),
+			'instance' => rest_url( 'loopbuy/v1/assistant/chat' ),
+		),
+		$status
+	);
+	$response->header( 'Content-Type', 'application/problem+json; charset=UTF-8' );
+	$response->header( 'Cache-Control', 'private, no-store, max-age=0, must-revalidate' );
+	return $response;
+}
+
+/**
+ * Convert an internal BFF error to a public REST response.
+ *
+ * @param WP_Error $error Internal error.
+ * @return WP_REST_Response
+ */
+function loopbuy_marketplace_assistant_wp_error( $error ) {
+	$code = $error->get_error_code();
+
+	if ( in_array( $code, array( 'loopbuy_marketplace_auth_required', 'loopbuy_marketplace_session_expired' ), true ) ) {
+		return loopbuy_marketplace_assistant_problem( 401, 'authentication-required', __( 'Authentication required', 'loopbuy' ), __( 'Please log in to use the shopping assistant.', 'loopbuy' ) );
+	}
+
+	if ( 'loopbuy_marketplace_method_not_allowed' === $code ) {
+		return loopbuy_marketplace_assistant_problem( 405, 'method-not-allowed', __( 'Method not allowed', 'loopbuy' ), __( 'The shopping assistant requires POST.', 'loopbuy' ) );
+	}
+
+	if ( in_array( $code, array( 'loopbuy_marketplace_cross_origin', 'loopbuy_marketplace_csrf_failed' ), true ) ) {
+		return loopbuy_marketplace_assistant_problem( 403, 'csrf-failed', __( 'Request rejected', 'loopbuy' ), __( 'Reload the page and try again.', 'loopbuy' ) );
+	}
+
+	if ( 'loopbuy_marketplace_backend_unavailable' === $code ) {
+		return loopbuy_marketplace_assistant_problem( 503, 'assistant-unavailable', __( 'Assistant unavailable', 'loopbuy' ), __( 'The shopping assistant is temporarily unavailable.', 'loopbuy' ) );
+	}
+
+	return loopbuy_marketplace_assistant_problem( 502, 'assistant-invalid-response', __( 'Assistant unavailable', 'loopbuy' ), __( 'The shopping assistant returned an invalid response.', 'loopbuy' ) );
+}
+
+/**
+ * Whitelist and sanitize a successful assistant response.
+ *
+ * No backend-only fields, credentials, HTML, or arbitrary nested JSON cross
+ * this boundary. Returning null tells the caller to fail closed with 502.
+ *
+ * @param mixed $data Decoded backend response.
+ * @return array|null
+ */
+function loopbuy_marketplace_sanitize_assistant_response( $data ) {
+	if ( ! is_array( $data )
+		|| ! isset( $data['answer'], $data['sources'], $data['model'], $data['degraded'], $data['usage'] )
+		|| ! is_string( $data['answer'] )
+		|| ! is_array( $data['sources'] )
+		|| ! is_string( $data['model'] )
+		|| ! is_bool( $data['degraded'] )
+		|| ! is_array( $data['usage'] ) ) {
+		return null;
+	}
+
+	$usage = array();
+	foreach ( array( 'prompt_tokens', 'completion_tokens', 'total_tokens' ) as $field ) {
+		if ( ! isset( $data['usage'][ $field ] ) || ! is_int( $data['usage'][ $field ] ) || $data['usage'][ $field ] < 0 ) {
+			return null;
+		}
+
+		$usage[ $field ] = $data['usage'][ $field ];
+	}
+
+	if ( isset( $data['usage']['cached_tokens'] ) ) {
+		if ( ! is_int( $data['usage']['cached_tokens'] ) || $data['usage']['cached_tokens'] < 0 ) {
+			return null;
+		}
+
+		$usage['cached_tokens'] = $data['usage']['cached_tokens'];
+	}
+
+	$sources = array();
+	foreach ( $data['sources'] as $source ) {
+		if ( ! is_array( $source )
+			|| ! isset( $source['listing_id'], $source['title'], $source['price'], $source['currency'], $source['score'] )
+			|| ! is_int( $source['listing_id'] )
+			|| $source['listing_id'] < 1
+			|| ! is_string( $source['title'] )
+			|| ! is_numeric( $source['price'] )
+			|| ! is_string( $source['currency'] )
+			|| ! is_numeric( $source['score'] ) ) {
+			return null;
+		}
+
+		$price = (float) $source['price'];
+		$score = (float) $source['score'];
+
+		if ( ! is_finite( $price ) || ! is_finite( $score ) ) {
+			return null;
+		}
+
+		$sources[] = array(
+			'listing_id' => $source['listing_id'],
+			'title'      => sanitize_text_field( $source['title'] ),
+			'price'      => $price,
+			'currency'   => sanitize_text_field( $source['currency'] ),
+			'score'      => $score,
+		);
+	}
+
+	$sanitized = array(
+		'answer'   => sanitize_textarea_field( $data['answer'] ),
+		'sources'  => $sources,
+		'model'    => sanitize_text_field( $data['model'] ),
+		'degraded' => $data['degraded'],
+		'usage'    => $usage,
+	);
+
+	if ( isset( $data['warning'] ) && is_string( $data['warning'] ) && '' !== trim( $data['warning'] ) ) {
+		$sanitized['warning'] = sanitize_text_field( $data['warning'] );
+	}
+
+	return $sanitized;
+}
+
+/**
+ * Proxy one stateless RAG chat turn through the authenticated same-origin BFF.
+ *
+ * Browser contract: POST JSON {"message":"..."} and send the page-rendered
+ * double-submit value in X-LoopBuy-CSRF. Access/refresh JWTs remain HttpOnly
+ * cookies and are attached only to the internal Go request.
+ *
+ * @param WP_REST_Request $request REST request.
+ * @return WP_REST_Response
+ */
+function loopbuy_marketplace_assistant_chat( $request ) {
+	loopbuy_marketplace_send_private_headers();
+
+	$verified = loopbuy_marketplace_verify_mutation( $request->get_header( 'x-loopbuy-csrf' ) );
+
+	if ( is_wp_error( $verified ) ) {
+		return loopbuy_marketplace_assistant_wp_error( $verified );
+	}
+
+	$payload = $request->get_json_params();
+
+	if ( ! is_array( $payload )
+		|| array( 'message' ) !== array_keys( $payload )
+		|| ! is_string( $payload['message'] ) ) {
+		return loopbuy_marketplace_assistant_problem( 400, 'invalid-request', __( 'Invalid request', 'loopbuy' ), __( 'Send one JSON message field.', 'loopbuy' ) );
+	}
+
+	$message = trim( $payload['message'] );
+
+	if ( '' === $message || strlen( $message ) > 4000 || 1 !== preg_match( '//u', $message ) ) {
+		return loopbuy_marketplace_assistant_problem( 422, 'validation-failed', __( 'Validation failed', 'loopbuy' ), __( 'Message must contain between 1 and 4,000 UTF-8 bytes.', 'loopbuy' ) );
+	}
+
+	$result = loopbuy_marketplace_authenticated_request(
+		'POST',
+		'/api/v1/assistant/chat',
+		array( 'message' => $message )
+	);
+
+	if ( is_wp_error( $result ) ) {
+		return loopbuy_marketplace_assistant_wp_error( $result );
+	}
+
+	$status = isset( $result['status'] ) ? (int) $result['status'] : 502;
+
+	if ( 200 !== $status ) {
+		$data      = isset( $result['data'] ) && is_array( $result['data'] ) ? $result['data'] : array();
+		$title     = isset( $data['title'] ) && is_string( $data['title'] ) ? $data['title'] : __( 'Assistant request failed', 'loopbuy' );
+		$detail    = isset( $data['detail'] ) && is_string( $data['detail'] ) ? $data['detail'] : __( 'The shopping assistant could not complete the request.', 'loopbuy' );
+		$type_path = isset( $data['type'] ) && is_string( $data['type'] ) ? wp_parse_url( $data['type'], PHP_URL_PATH ) : '';
+		$code      = is_string( $type_path ) ? basename( $type_path ) : 'assistant-request-failed';
+
+		return loopbuy_marketplace_assistant_problem( $status, $code, $title, $detail );
+	}
+
+	$data = loopbuy_marketplace_sanitize_assistant_response( isset( $result['data'] ) ? $result['data'] : null );
+
+	if ( null === $data ) {
+		return loopbuy_marketplace_assistant_problem( 502, 'assistant-invalid-response', __( 'Assistant unavailable', 'loopbuy' ), __( 'The shopping assistant returned an invalid response.', 'loopbuy' ) );
+	}
+
+	$response = new WP_REST_Response( $data, 200 );
+	$response->header( 'Cache-Control', 'private, no-store, max-age=0, must-revalidate' );
 	return $response;
 }
 

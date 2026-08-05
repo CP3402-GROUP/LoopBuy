@@ -135,10 +135,9 @@ Replace all `change-*` and `replace-*` placeholders. Never commit `.env`. `JWT_S
 | `QDRANT_COLLECTION` | `loopbuy_listings_v1` | Collection owned by this backend. |
 | `QDRANT_VECTOR_NAME` | `listing_text_v1` | Named dense vector used for listing text. |
 | `ML_SERVICE_URL` | `http://ml:8000` | Internal FastAPI service root. |
-| `QWEN_API_KEY` | falls back to `DASHSCOPE_API_KEY` | Preferred Qwen credential variable. |
-| `DASHSCOPE_API_KEY` | none | Alias used when `QWEN_API_KEY` is empty. |
-| `QWEN_BASE_URL` | none | Required to enable Qwen; use the region-specific OpenAI-compatible `/compatible-mode/v1` root. |
-| `QWEN_MODEL` | `qwen3.7-plus` | Qwen model identifier. |
+| `QWEN_API_KEY` | none | The only required Qwen credential; sent server-side as a bearer token. |
+| `QWEN_BASE_URL` | `https://dashscope-intl.aliyuncs.com/compatible-mode/v1` | Optional region-specific OpenAI-compatible API override. China/Beijing and US/Virginia keys require their matching regional endpoint. |
+| `QWEN_MODEL` | `qwen3.5-flash` | Qwen model identifier. |
 | `QWEN_MAX_REQUESTS_PER_HOUR` | `100` | MySQL-backed global hourly Qwen completion cap shared by all API replicas. |
 | `QWEN_MAX_REQUESTS_PER_USER_DAY` | `10` | Per-user daily Qwen completion cap. |
 | `AI_CHAT_FALLBACK_ENABLED` | `true` | Allows deterministic listing results when Qwen is absent or fails. |

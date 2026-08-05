@@ -13,7 +13,9 @@ COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-loopbuy}"
 LOG_FILE="${LOG_FILE:-$SCRIPT_DIR/deploy.log}"
 STATE_FILE="${STATE_FILE:-$SCRIPT_DIR/.last-successful-deploy}"
 PROVISION_STATE_FILE="${PROVISION_STATE_FILE:-$SCRIPT_DIR/.last-successful-provision}"
-LOCK_FILE="${LOCK_FILE:-/tmp/loopbuy-deploy.lock}"
+LOCK_BASE="${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}"
+LOCK_DIR="$LOCK_BASE/loopbuy-$UID"
+LOCK_FILE="$LOCK_DIR/deploy.lock"
 MAX_LOG_BYTES="${MAX_LOG_BYTES:-1048576}"
 DEPLOY_TIMEOUT_SECONDS="${DEPLOY_TIMEOUT_SECONDS:-180}"
 LOG_NOOP="${LOG_NOOP:-0}"
@@ -46,6 +48,41 @@ fail() {
   rotate_log
   log "ERROR: $*"
   exit 1
+}
+
+prepare_lock_file() {
+  if [ -L "$LOCK_DIR" ]; then
+    fail "lock directory must not be a symlink: $LOCK_DIR"
+  fi
+
+  if [ ! -e "$LOCK_DIR" ]; then
+    if ! (umask 077 && mkdir -- "$LOCK_DIR"); then
+      [ -d "$LOCK_DIR" ] && [ ! -L "$LOCK_DIR" ] \
+        || fail "cannot create private lock directory: $LOCK_DIR"
+    fi
+  fi
+
+  if [ ! -d "$LOCK_DIR" ] || [ ! -O "$LOCK_DIR" ]; then
+    fail "lock directory must be owned by the deploy user: $LOCK_DIR"
+  fi
+
+  chmod 700 -- "$LOCK_DIR" || fail "cannot secure lock directory: $LOCK_DIR"
+
+  if [ -L "$LOCK_FILE" ]; then
+    fail "lock file must not be a symlink: $LOCK_FILE"
+  fi
+  if [ -e "$LOCK_FILE" ] && { [ ! -f "$LOCK_FILE" ] || [ ! -O "$LOCK_FILE" ]; }; then
+    fail "lock file must be a regular file owned by the deploy user: $LOCK_FILE"
+  fi
+  if [ ! -e "$LOCK_FILE" ]; then
+    (umask 077 && : >"$LOCK_FILE") || fail "cannot create lock file: $LOCK_FILE"
+  fi
+
+  if [ -L "$LOCK_FILE" ] || [ ! -f "$LOCK_FILE" ] || [ ! -O "$LOCK_FILE" ]; then
+    fail "lock file failed its post-create safety check: $LOCK_FILE"
+  fi
+
+  chmod 600 -- "$LOCK_FILE" || fail "cannot secure lock file: $LOCK_FILE"
 }
 
 run_logged() {
@@ -147,17 +184,16 @@ validate_deploy_env() {
   local qwen_key
   qwen_key="$(env_file_value QWEN_API_KEY || true)"
   if [ -z "$qwen_key" ]; then
-    qwen_key="$(env_file_value DASHSCOPE_API_KEY || true)"
-  fi
-  if [ -z "$qwen_key" ]; then
-    fail "QWEN_API_KEY or DASHSCOPE_API_KEY is required for production deployment"
+    fail "QWEN_API_KEY is required for production deployment"
   fi
 
   value="$(env_file_value QWEN_BASE_URL || true)"
-  case "$value" in
-    https://*) ;;
-    *) fail "QWEN_BASE_URL must be a non-empty HTTPS URL for production deployment" ;;
-  esac
+  if [ -n "$value" ]; then
+    case "$value" in
+      https://*) ;;
+      *) fail "QWEN_BASE_URL override must be an HTTPS URL" ;;
+    esac
+  fi
 
   value="$(env_file_value GOOGLE_REDIRECT_URIS || true)"
   case "$value" in
@@ -193,8 +229,8 @@ require_cmd "git" "$GIT"
 require_cmd "docker" "$DOCKER"
 require_cmd "flock" "$FLOCK"
 
-mkdir -p "$(dirname "$LOCK_FILE")"
-exec 9>"$LOCK_FILE"
+prepare_lock_file
+exec 9<>"$LOCK_FILE"
 if ! "$FLOCK" -n 9; then
   exit 0
 fi

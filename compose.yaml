@@ -112,10 +112,9 @@ services:
       QDRANT_COLLECTION: ${QDRANT_COLLECTION:-loopbuy_listings_v1}
       QDRANT_VECTOR_NAME: ${QDRANT_VECTOR_NAME:-listing_text_v1}
       ML_SERVICE_URL: http://ml:8000
-      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
       QWEN_API_KEY: ${QWEN_API_KEY:-}
-      QWEN_BASE_URL: ${QWEN_BASE_URL:-}
-      QWEN_MODEL: ${QWEN_MODEL:-qwen3.7-plus}
+      QWEN_BASE_URL: ${QWEN_BASE_URL:-https://dashscope-intl.aliyuncs.com/compatible-mode/v1}
+      QWEN_MODEL: ${QWEN_MODEL:-qwen3.5-flash}
       QWEN_MAX_REQUESTS_PER_HOUR: ${QWEN_MAX_REQUESTS_PER_HOUR:-100}
       QWEN_MAX_REQUESTS_PER_USER_DAY: ${QWEN_MAX_REQUESTS_PER_USER_DAY:-10}
       AI_CHAT_FALLBACK_ENABLED: ${AI_CHAT_FALLBACK_ENABLED:-true}

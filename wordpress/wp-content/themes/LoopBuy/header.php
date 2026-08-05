@@ -297,6 +297,7 @@ $loopbuy_marketplace_csrf = is_array( $loopbuy_marketplace_user ) && function_ex
 				<a
 					href="<?php echo esc_url( home_url( '/saved/' ) ); ?>"
 					class="header-icon-link"
+					aria-label="<?php esc_attr_e( 'Saved listings', 'loopbuy' ); ?>"
 				>
 
 					<span class="header-icon-wrap">
@@ -339,6 +340,7 @@ $loopbuy_marketplace_csrf = is_array( $loopbuy_marketplace_user ) && function_ex
 				<a
 					href="<?php echo esc_url( home_url( '/cart/' ) ); ?>"
 					class="header-icon-link"
+					aria-label="<?php esc_attr_e( 'Cart', 'loopbuy' ); ?>"
 				>
 
 					<span class="header-icon-wrap">
@@ -388,6 +390,7 @@ $loopbuy_marketplace_csrf = is_array( $loopbuy_marketplace_user ) && function_ex
 				<a
 					href="<?php echo esc_url( home_url( '/ai-assistant/' ) ); ?>"
 					class="header-icon-link loopbuy-ai-header-link"
+					aria-label="<?php esc_attr_e( 'AI Shopping Assistant', 'loopbuy' ); ?>"
 				>
 
 					<svg
@@ -430,6 +433,7 @@ $loopbuy_marketplace_csrf = is_array( $loopbuy_marketplace_user ) && function_ex
 				<a
 					href="<?php echo esc_url( home_url( '/messages/' ) ); ?>"
 					class="header-icon-link"
+					aria-label="<?php esc_attr_e( 'Messages', 'loopbuy' ); ?>"
 				>
 
 					<svg
@@ -639,6 +643,35 @@ $loopbuy_marketplace_csrf = is_array( $loopbuy_marketplace_user ) && function_ex
 										</svg>
 
 										<?php esc_html_e( 'Orders', 'loopbuy' ); ?>
+
+									</a>
+
+								</li>
+
+
+								<li>
+
+									<a
+										href="<?php echo esc_url( home_url( '/ai-assistant/' ) ); ?>"
+										role="menuitem"
+									>
+
+										<svg
+											width="18"
+											height="18"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											aria-hidden="true"
+										>
+											<path d="M12 3l1.2 3.3 3.3 1.2-3.3 1.2L12 12l-1.2-3.3-3.3-1.2 3.3-1.2L12 3Z"/>
+											<path d="M7 14l.8 2.2 2.2.8-2.2.8L7 20l-.8-2.2L4 17l2.2-.8L7 14Z"/>
+										</svg>
+
+										<?php esc_html_e( 'AI Shopping Assistant', 'loopbuy' ); ?>
 
 									</a>
 

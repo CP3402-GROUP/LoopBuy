@@ -30,11 +30,11 @@ The WordPress/MariaDB database remains separate and is used only for WordPress i
 The tracked MU plugins provide two explicit bridges:
 
 - `loopbuy-backend-bridge.php` makes the Go catalogue authoritative for browse and product-detail pages, with demo fixtures used only when the backend is unreachable or malformed—not when a healthy catalogue is empty. API-owned `/media/...` images are exposed through a MIME-checked, bounded, streaming same-origin proxy.
-- `loopbuy-marketplace-session.php` sends registration, login, refresh, profile, and logout requests server-to-server. Marketplace access/refresh tokens are confined to bounded host-only `HttpOnly` cookies (`Secure` on HTTPS, `SameSite=Lax`); mutations also require a per-browser CSRF token and matching Origin/Referer. WordPress administrator authentication and capabilities remain independent.
+- `loopbuy-marketplace-session.php` sends registration, login, refresh, profile, logout, and AI-assistant requests server-to-server. Marketplace access/refresh tokens are confined to bounded host-only `HttpOnly` cookies (`Secure` on HTTPS, `SameSite=Lax`); mutations also require a per-browser CSRF token and matching Origin/Referer. WordPress administrator authentication and capabilities remain independent.
 
-The header, registration, login, profile, and sell templates use the Go account. Sell creates the listing through the server-side BFF and uploads up to ten images without exposing the JWT to JavaScript. Cart, saved-items, messages, orders, and my-listings have not all been migrated yet; some still use demo/localStorage behavior. Orders, reviews, password recovery, and avatar upload are shown as unavailable rather than faked.
+The header, registration, login, profile, sell, and `/ai-assistant/` templates use the Go account. The AI Finder page calls the same-origin WordPress BFF, renders grounded listing sources without exposing JWTs to JavaScript, and explicitly labels deterministic fallback answers when Qwen or embeddings are unavailable. Sell creates listings and uploads up to ten images through the same server-side boundary. Cart, saved-items, messages, orders, and my-listings have not all been migrated yet; some still use demo/localStorage behavior. Orders, reviews, password recovery, and avatar upload are shown as unavailable rather than faked.
 
-`deployment/provision-wordpress.php` idempotently creates the 14 required WordPress page records (including Privacy and Terms), activates the LoopBuy theme, and configures permalinks. `deployment/deploy.sh` runs it after the containers are healthy and records a separate provisioning signature, so template routes do not require repeated wp-admin work. The WordPress installation itself must already have completed its one-time core installer.
+`deployment/provision-wordpress.php` idempotently creates the 15 required WordPress page records (including AI Finder, Privacy, and Terms), activates the LoopBuy theme, and configures permalinks. `deployment/deploy.sh` runs it after the containers are healthy and records a separate provisioning signature, so template routes do not require repeated wp-admin work. The WordPress installation itself must already have completed its one-time core installer.
 
 ## Local startup
 
@@ -63,13 +63,15 @@ This exposes backend MySQL at `127.0.0.1:3307` and Qdrant at `127.0.0.1:6333` by
 Provider configuration lives only in `.env`/server environment:
 
 - `OPENAI_API_KEY`, embedding model/dimensions, and MySQL-backed global-hour/per-user-day request budgets;
-- `QDRANT_API_KEY`, collection, vector name, and dimensions;
-- `QWEN_API_KEY` or `DASHSCOPE_API_KEY`, plus the region-appropriate HTTPS `QWEN_BASE_URL`, model, and request budgets;
+- `QDRANT_API_KEY`, the private internal password shared by the API and Qdrant, plus collection/vector settings;
+- `QWEN_API_KEY` for Qwen 3.5 Flash; the international HTTPS base URL and `qwen3.5-flash` model are defaults, with optional regional/model overrides;
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and an exact `GOOGLE_REDIRECT_URIS` allowlist;
 - independent `BFF_SHARED_SECRET` for signed, privacy-preserving per-client rate-limit buckets between WordPress and Go;
 - `RESEND_API_KEY`, verified `RESEND_FROM`, verification URL/TTL, and `RESEND_MAX_EMAILS_PER_HOUR`.
 
 Listing images persist in the `listing_media_data` volume on the host server. `DEMO_SEED_ENABLED=true` idempotently creates three sample sellers and twelve listings with repository-owned local photos; repeated starts do not duplicate them or enqueue duplicate embedding work.
+
+On a fresh host the normal deployment performs that seed automatically. To add or verify the catalogue later, run `bash ./deployment/seed-demo.sh`; see [`deployment/README.md`](deployment/README.md) for the guarded one-command workflow.
 
 Never expose provider keys to WordPress JavaScript or commit `.env`.
 

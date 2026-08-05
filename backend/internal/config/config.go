@@ -136,9 +136,9 @@ func Load() (Config, error) {
 		QdrantCollection: env("QDRANT_COLLECTION", "loopbuy_listings_v1"),
 		QdrantVectorName: env("QDRANT_VECTOR_NAME", "listing_text_v1"),
 
-		QwenAPIKey:             firstNonEmpty(os.Getenv("QWEN_API_KEY"), os.Getenv("DASHSCOPE_API_KEY")),
-		QwenBaseURL:            strings.TrimRight(os.Getenv("QWEN_BASE_URL"), "/"),
-		QwenModel:              env("QWEN_MODEL", "qwen3.7-plus"),
+		QwenAPIKey:             strings.TrimSpace(os.Getenv("QWEN_API_KEY")),
+		QwenBaseURL:            strings.TrimRight(env("QWEN_BASE_URL", "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"), "/"),
+		QwenModel:              env("QWEN_MODEL", "qwen3.5-flash"),
 		QwenMaxRequestsHour:    qwenMaxRequestsHour,
 		QwenMaxRequestsUserDay: qwenMaxRequestsUserDay,
 
@@ -170,15 +170,6 @@ func env(key, fallback string) string {
 		return value
 	}
 	return fallback
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if strings.TrimSpace(value) != "" {
-			return value
-		}
-	}
-	return ""
 }
 
 func splitCSV(value string) []string {
