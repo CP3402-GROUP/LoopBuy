@@ -219,18 +219,97 @@ $loopbuy_register_url       = home_url( '/register/' );
 					return avatar;
 				}
 
+				function appendInlineFormatting(element, value) {
+					var pattern = /(\*\*[^*\n]+\*\*|`[^`\n]+`)/g;
+					var lastIndex = 0;
+					var match;
+
+					while ((match = pattern.exec(value)) !== null) {
+						if (match.index > lastIndex) {
+							element.appendChild(document.createTextNode(value.slice(lastIndex, match.index)));
+						}
+
+						var token = match[0];
+						var formatted = document.createElement(token.slice(0, 2) === '**' ? 'strong' : 'code');
+						formatted.textContent = token.slice(token.slice(0, 2) === '**' ? 2 : 1, token.slice(0, 2) === '**' ? -2 : -1);
+						element.appendChild(formatted);
+						lastIndex = pattern.lastIndex;
+					}
+
+					if (lastIndex < value.length) {
+						element.appendChild(document.createTextNode(value.slice(lastIndex)));
+					}
+				}
+
+				function renderAssistantText(element, value) {
+					var lines = value.replace(/\r\n?/g, '\n').split('\n');
+					var paragraphLines = [];
+					var activeList = null;
+					var activeListType = '';
+
+					function flushParagraph() {
+						if (paragraphLines.length === 0) {
+							return;
+						}
+
+						var paragraph = document.createElement('p');
+						appendInlineFormatting(paragraph, paragraphLines.join(' '));
+						element.appendChild(paragraph);
+						paragraphLines = [];
+					}
+
+					element.textContent = '';
+					lines.forEach(function (rawLine) {
+						var line = rawLine.trim();
+						var unordered = line.match(/^[-*]\s+(.+)$/);
+						var ordered = line.match(/^\d+[.)]\s+(.+)$/);
+						var listMatch = unordered || ordered;
+						var listType = ordered ? 'ol' : 'ul';
+
+						if (line === '') {
+							flushParagraph();
+							activeList = null;
+							activeListType = '';
+							return;
+						}
+
+						if (listMatch) {
+							flushParagraph();
+							if (!activeList || activeListType !== listType) {
+								activeList = document.createElement(listType);
+								activeListType = listType;
+								element.appendChild(activeList);
+							}
+
+							var item = document.createElement('li');
+							appendInlineFormatting(item, listMatch[1]);
+							activeList.appendChild(item);
+							return;
+						}
+
+						activeList = null;
+						activeListType = '';
+						paragraphLines.push(line.replace(/^#{1,3}\s+/, ''));
+					});
+					flushParagraph();
+				}
+
 				function makeMessage(role, message) {
 					var article = document.createElement('article');
 					var content = document.createElement('div');
 					var label = document.createElement('p');
-					var text = document.createElement('p');
+					var text = document.createElement(role === 'user' ? 'p' : 'div');
 
 					article.className = 'loopbuy-assistant-message ' + (role === 'user' ? 'is-user' : 'is-assistant');
 					content.className = 'loopbuy-assistant-message-content';
 					label.className = 'loopbuy-assistant-message-label';
 					label.textContent = role === 'user' ? '<?php echo esc_js( __( 'You', 'loopbuy' ) ); ?>' : '<?php echo esc_js( __( 'LoopBuy Finder', 'loopbuy' ) ); ?>';
 					text.className = 'loopbuy-assistant-message-text';
-					text.textContent = message;
+					if (role === 'user') {
+						text.textContent = message;
+					} else {
+						renderAssistantText(text, message);
+					}
 
 					content.appendChild(label);
 					content.appendChild(text);
@@ -261,7 +340,45 @@ $loopbuy_register_url       = home_url( '/register/' );
 					}
 				}
 
-				function appendSources(article, sources) {
+				function referencedSource(answerText, sources) {
+					var matcher = /(?:\blisting(?:[\s_-]+id)?\s*[:#]?\s*|#)(\d+)\b/gi;
+					var match;
+
+					while ((match = matcher.exec(answerText)) !== null) {
+						var listingId = Number(match[1]);
+						var source = sources.find(function (candidate) {
+							return Number(candidate.listing_id) === listingId;
+						});
+						if (source) {
+							return source;
+						}
+					}
+
+					return null;
+				}
+
+				function listingUrl(source) {
+					var url = new URL(root.dataset.productUrl, window.location.origin);
+					url.searchParams.set('id', String(Number(source.listing_id)));
+					return url.toString();
+				}
+
+				function appendSourceListItem(list, source) {
+					var item = document.createElement('li');
+					var link = document.createElement('a');
+					var title = document.createElement('span');
+					var price = document.createElement('span');
+
+					link.href = listingUrl(source);
+					title.textContent = source.title.trim();
+					price.textContent = sourcePrice(source);
+					link.appendChild(title);
+					link.appendChild(price);
+					item.appendChild(link);
+					list.appendChild(item);
+				}
+
+				function appendSources(article, sources, answerText) {
 					if (!Array.isArray(sources) || sources.length === 0) {
 						return;
 					}
@@ -276,30 +393,56 @@ $loopbuy_register_url       = home_url( '/register/' );
 					}
 
 					var container = document.createElement('div');
-					var heading = document.createElement('p');
-					var list = document.createElement('ul');
+					var featured = referencedSource(answerText, validSources);
+					var remainingSources = validSources;
 					container.className = 'loopbuy-assistant-sources';
-					heading.textContent = '<?php echo esc_js( __( 'Listings used for this answer', 'loopbuy' ) ); ?>';
-					container.appendChild(heading);
 
-					validSources.forEach(function (source) {
-						var item = document.createElement('li');
+					if (featured) {
+						var featuredBlock = document.createElement('div');
+						var featuredLabel = document.createElement('p');
 						var link = document.createElement('a');
-						var title = document.createElement('span');
+						var summary = document.createElement('span');
+						var title = document.createElement('strong');
 						var price = document.createElement('span');
-						var url = new URL(root.dataset.productUrl, window.location.origin);
+						var action = document.createElement('span');
 
-						url.searchParams.set('id', String(Number(source.listing_id)));
-						link.href = url.toString();
-						title.textContent = source.title.trim();
-						price.textContent = sourcePrice(source);
-						link.appendChild(title);
-						link.appendChild(price);
-						item.appendChild(link);
-						list.appendChild(item);
-					});
+						featuredBlock.className = 'loopbuy-assistant-primary-source';
+						featuredLabel.textContent = '<?php echo esc_js( __( 'Recommended listing', 'loopbuy' ) ); ?>';
+						link.href = listingUrl(featured);
+						link.className = 'loopbuy-assistant-primary-source-link';
+						title.textContent = featured.title.trim();
+						price.textContent = sourcePrice(featured);
+						action.textContent = '<?php echo esc_js( __( 'Open listing', 'loopbuy' ) ); ?> \u2192';
+						summary.appendChild(title);
+						summary.appendChild(price);
+						link.appendChild(summary);
+						link.appendChild(action);
+						featuredBlock.appendChild(featuredLabel);
+						featuredBlock.appendChild(link);
+						container.appendChild(featuredBlock);
+						remainingSources = validSources.filter(function (source) {
+							return Number(source.listing_id) !== Number(featured.listing_id);
+						});
+					}
 
-					container.appendChild(list);
+					if (remainingSources.length > 0) {
+						var details = document.createElement('details');
+						var detailsSummary = document.createElement('summary');
+						var list = document.createElement('ul');
+						var summaryLabel = featured
+							? '<?php echo esc_js( __( 'Other listings considered', 'loopbuy' ) ); ?>'
+							: '<?php echo esc_js( __( 'Listings considered', 'loopbuy' ) ); ?>';
+
+						details.className = 'loopbuy-assistant-source-details';
+						detailsSummary.textContent = summaryLabel + ' (' + String(remainingSources.length) + ')';
+						remainingSources.forEach(function (source) {
+							appendSourceListItem(list, source);
+						});
+						details.appendChild(detailsSummary);
+						details.appendChild(list);
+						container.appendChild(details);
+					}
+
 					article.querySelector('.loopbuy-assistant-message-content').appendChild(container);
 				}
 
@@ -384,7 +527,7 @@ $loopbuy_register_url       = home_url( '/register/' );
 						}
 
 						var answer = makeMessage('assistant', data.answer.trim());
-						appendSources(answer, data.sources);
+						appendSources(answer, data.sources, data.answer);
 						if (data.degraded === true) {
 							appendDegradedNotice(answer, typeof data.warning === 'string' ? data.warning : '');
 						}

@@ -5956,6 +5956,41 @@ html.dark-mode .theme-toggle,
 	white-space: pre-wrap;
 }
 
+.loopbuy-assistant-message.is-assistant .loopbuy-assistant-message-text {
+	white-space: normal;
+}
+
+.loopbuy-assistant-message-text p {
+	margin: 0 0 0.72em;
+}
+
+.loopbuy-assistant-message-text p:last-child,
+.loopbuy-assistant-message-text ul:last-child,
+.loopbuy-assistant-message-text ol:last-child {
+	margin-bottom: 0;
+}
+
+.loopbuy-assistant-message-text ul,
+.loopbuy-assistant-message-text ol {
+	margin: 0.55em 0 0.8em;
+	padding-left: 1.25em;
+}
+
+.loopbuy-assistant-message-text li + li {
+	margin-top: 0.28em;
+}
+
+.loopbuy-assistant-message-text strong {
+	font-weight: 800;
+}
+
+.loopbuy-assistant-message-text code {
+	padding: 0.08em 0.32em;
+	border-radius: 4px;
+	background: var(--loopbuy-soft);
+	font-size: 0.9em;
+}
+
 .loopbuy-assistant-message.is-loading .loopbuy-assistant-message-text::after {
 	display: inline-block;
 	width: 1.3em;
@@ -6023,6 +6058,68 @@ html.dark-mode .theme-toggle,
 .loopbuy-assistant-sources a span:last-child {
 	flex: 0 0 auto;
 	color: var(--loopbuy-primary);
+}
+
+.loopbuy-assistant-primary-source {
+	margin-bottom: 10px;
+}
+
+.loopbuy-assistant-primary-source > p {
+	margin: 0 0 8px;
+	color: var(--loopbuy-muted);
+	font-size: 0.72rem;
+	font-weight: 800;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.loopbuy-assistant-sources .loopbuy-assistant-primary-source-link {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: 14px;
+	align-items: center;
+	padding: 13px 14px;
+	border-color: rgba(8, 127, 120, 0.3);
+	background: linear-gradient(135deg, rgba(83, 98, 125, 0.1), rgba(8, 127, 120, 0.11));
+}
+
+.loopbuy-assistant-sources .loopbuy-assistant-primary-source-link > span:first-child {
+	display: grid;
+	gap: 2px;
+	overflow: hidden;
+	white-space: normal;
+}
+
+.loopbuy-assistant-sources .loopbuy-assistant-primary-source-link strong {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.loopbuy-assistant-sources .loopbuy-assistant-primary-source-link > span:first-child > span {
+	color: var(--loopbuy-muted);
+	font-size: 0.77rem;
+}
+
+.loopbuy-assistant-sources .loopbuy-assistant-primary-source-link > span:last-child {
+	padding: 7px 10px;
+	border-radius: 8px;
+	background: var(--loopbuy-primary);
+	color: #ffffff;
+	font-size: 0.74rem;
+	font-weight: 800;
+	white-space: nowrap;
+}
+
+.loopbuy-assistant-source-details > summary {
+	cursor: pointer;
+	color: var(--loopbuy-muted);
+	font-size: 0.75rem;
+	font-weight: 800;
+}
+
+.loopbuy-assistant-source-details[open] > summary {
+	margin-bottom: 8px;
 }
 
 .loopbuy-assistant-degraded {
