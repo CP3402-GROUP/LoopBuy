@@ -8,10 +8,14 @@ PROJECT_DIR="${PROJECT_DIR:-$(cd -- "$SCRIPT_DIR/.." && pwd)}"
 GIT_BRANCH="${GIT_BRANCH:-main}"
 COMPOSE_FILE="${COMPOSE_FILE:-$PROJECT_DIR/compose.yaml}"
 ENV_FILE="${ENV_FILE:-$PROJECT_DIR/.env}"
+PROVISION_FILE="${PROVISION_FILE:-$SCRIPT_DIR/provision-wordpress.php}"
 COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-loopbuy}"
 LOG_FILE="${LOG_FILE:-$SCRIPT_DIR/deploy.log}"
 STATE_FILE="${STATE_FILE:-$SCRIPT_DIR/.last-successful-deploy}"
-LOCK_FILE="${LOCK_FILE:-/tmp/loopbuy-deploy.lock}"
+PROVISION_STATE_FILE="${PROVISION_STATE_FILE:-$SCRIPT_DIR/.last-successful-provision}"
+LOCK_BASE="${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}"
+LOCK_DIR="$LOCK_BASE/loopbuy-$UID"
+LOCK_FILE="$LOCK_DIR/deploy.lock"
 MAX_LOG_BYTES="${MAX_LOG_BYTES:-1048576}"
 DEPLOY_TIMEOUT_SECONDS="${DEPLOY_TIMEOUT_SECONDS:-180}"
 LOG_NOOP="${LOG_NOOP:-0}"
@@ -44,6 +48,41 @@ fail() {
   rotate_log
   log "ERROR: $*"
   exit 1
+}
+
+prepare_lock_file() {
+  if [ -L "$LOCK_DIR" ]; then
+    fail "lock directory must not be a symlink: $LOCK_DIR"
+  fi
+
+  if [ ! -e "$LOCK_DIR" ]; then
+    if ! (umask 077 && mkdir -- "$LOCK_DIR"); then
+      [ -d "$LOCK_DIR" ] && [ ! -L "$LOCK_DIR" ] \
+        || fail "cannot create private lock directory: $LOCK_DIR"
+    fi
+  fi
+
+  if [ ! -d "$LOCK_DIR" ] || [ ! -O "$LOCK_DIR" ]; then
+    fail "lock directory must be owned by the deploy user: $LOCK_DIR"
+  fi
+
+  chmod 700 -- "$LOCK_DIR" || fail "cannot secure lock directory: $LOCK_DIR"
+
+  if [ -L "$LOCK_FILE" ]; then
+    fail "lock file must not be a symlink: $LOCK_FILE"
+  fi
+  if [ -e "$LOCK_FILE" ] && { [ ! -f "$LOCK_FILE" ] || [ ! -O "$LOCK_FILE" ]; }; then
+    fail "lock file must be a regular file owned by the deploy user: $LOCK_FILE"
+  fi
+  if [ ! -e "$LOCK_FILE" ]; then
+    (umask 077 && : >"$LOCK_FILE") || fail "cannot create lock file: $LOCK_FILE"
+  fi
+
+  if [ -L "$LOCK_FILE" ] || [ ! -f "$LOCK_FILE" ] || [ ! -O "$LOCK_FILE" ]; then
+    fail "lock file failed its post-create safety check: $LOCK_FILE"
+  fi
+
+  chmod 600 -- "$LOCK_FILE" || fail "cannot secure lock file: $LOCK_FILE"
 }
 
 run_logged() {
@@ -83,6 +122,10 @@ compose() {
     "$@"
 }
 
+provision_wordpress() {
+  compose exec -T --user www-data wordpress php <"$PROVISION_FILE"
+}
+
 env_file_value() {
   local key="$1"
   local line
@@ -112,10 +155,13 @@ validate_deploy_env() {
     return 0
   fi
 
-  for key in WORDPRESS_DB_PASSWORD WORDPRESS_DB_ROOT_PASSWORD; do
+  for key in WORDPRESS_DB_PASSWORD WORDPRESS_DB_ROOT_PASSWORD \
+    BACKEND_DB_PASSWORD BACKEND_DB_ROOT_PASSWORD JWT_SECRET QDRANT_API_KEY OPENAI_API_KEY \
+    GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GOOGLE_REDIRECT_URIS BFF_SHARED_SECRET \
+    RESEND_API_KEY RESEND_FROM EMAIL_VERIFICATION_URL; do
     value="$(env_file_value "$key" || true)"
     case "$value" in
-      ""|change-me|change-root-me|change-me-*|dev-*)
+      ""|change-me|change-root-me|change-*|replace-*|loopbuy-*-local-only|dev-*|test-*)
         invalid="$invalid $key"
         ;;
     esac
@@ -124,6 +170,54 @@ validate_deploy_env() {
   if [ -n "$invalid" ]; then
     fail "deployment env has missing or placeholder values:$invalid"
   fi
+
+  value="$(env_file_value JWT_SECRET || true)"
+  if [ "${#value}" -lt 32 ]; then
+    fail "JWT_SECRET must contain at least 32 characters"
+  fi
+
+  value="$(env_file_value BFF_SHARED_SECRET || true)"
+  if [ "${#value}" -lt 32 ]; then
+    fail "BFF_SHARED_SECRET must contain at least 32 independent characters"
+  fi
+
+  local qwen_key
+  qwen_key="$(env_file_value QWEN_API_KEY || true)"
+  if [ -z "$qwen_key" ]; then
+    fail "QWEN_API_KEY is required for production deployment"
+  fi
+
+  value="$(env_file_value QWEN_BASE_URL || true)"
+  if [ -n "$value" ]; then
+    case "$value" in
+      https://*) ;;
+      *) fail "QWEN_BASE_URL override must be an HTTPS URL" ;;
+    esac
+  fi
+
+  value="$(env_file_value GOOGLE_REDIRECT_URIS || true)"
+  case "$value" in
+    *https://*) ;;
+    *) fail "GOOGLE_REDIRECT_URIS must include an HTTPS production callback" ;;
+  esac
+
+  value="$(env_file_value EMAIL_VERIFICATION_URL || true)"
+  case "$value" in
+    https://*) ;;
+    *) fail "EMAIL_VERIFICATION_URL must be an HTTPS URL for production deployment" ;;
+  esac
+
+  value="$(env_file_value RESEND_BASE_URL || true)"
+  case "$value" in
+    https://*) ;;
+    *) fail "RESEND_BASE_URL must be an HTTPS URL for production deployment" ;;
+  esac
+
+  value="$(env_file_value RESEND_FROM || true)"
+  case "$value" in
+    *@loopbuy.store*) ;;
+    *) fail "RESEND_FROM must use the verified loopbuy.store domain" ;;
+  esac
 
   value="$(env_file_value WORDPRESS_DEBUG || true)"
   if [ "$value" != "0" ]; then
@@ -135,8 +229,8 @@ require_cmd "git" "$GIT"
 require_cmd "docker" "$DOCKER"
 require_cmd "flock" "$FLOCK"
 
-mkdir -p "$(dirname "$LOCK_FILE")"
-exec 9>"$LOCK_FILE"
+prepare_lock_file
+exec 9<>"$LOCK_FILE"
 if ! "$FLOCK" -n 9; then
   exit 0
 fi
@@ -149,6 +243,7 @@ fi
 
 require_file "$COMPOSE_FILE"
 require_file "$ENV_FILE"
+require_file "$PROVISION_FILE"
 validate_deploy_env
 
 current_branch="$("$GIT" symbolic-ref --quiet --short HEAD || true)"
@@ -170,9 +265,15 @@ last_deployed_commit=""
 if [ -r "$STATE_FILE" ]; then
   last_deployed_commit="$(head -n 1 "$STATE_FILE")"
 fi
+provision_signature="$("$GIT" hash-object "$PROVISION_FILE")"
+last_provision_signature=""
+if [ -r "$PROVISION_STATE_FILE" ]; then
+  last_provision_signature="$(head -n 1 "$PROVISION_STATE_FILE")"
+fi
 
 if [ "$local_commit" = "$remote_commit" ] \
   && [ "$last_deployed_commit" = "$remote_commit" ] \
+  && [ "$last_provision_signature" = "$provision_signature" ] \
   && [ "$FORCE_DEPLOY" != "1" ]; then
   if [ "$LOG_NOOP" = "1" ]; then
     rotate_log
@@ -199,7 +300,7 @@ if [ "$local_commit" != "$remote_commit" ]; then
 elif [ "$FORCE_DEPLOY" = "1" ]; then
   log "Forced deployment of HEAD=$local_commit"
 else
-  log "HEAD=$local_commit has not been deployed successfully; retrying deployment"
+  log "HEAD=$local_commit has pending deployment or WordPress provisioning; retrying"
 fi
 
 run_logged "Check Docker daemon" \
@@ -208,16 +309,25 @@ run_logged "Check Docker daemon" \
 run_logged "Validate Docker Compose configuration" \
   compose config --quiet || exit 1
 
-run_logged "Pull Docker images" \
-  compose pull || exit 1
+run_logged "Pull third-party Docker images" \
+  compose pull --ignore-buildable || exit 1
+
+run_logged "Build LoopBuy API and ML images" \
+  compose build --pull api ml || exit 1
 
 run_logged "Start Docker Compose services" \
   compose up -d --remove-orphans --wait --wait-timeout "$DEPLOY_TIMEOUT_SECONDS" || exit 1
+
+provision_signature="$("$GIT" hash-object "$PROVISION_FILE")"
+run_logged "Provision WordPress pages and settings" \
+  provision_wordpress || exit 1
 
 run_logged "Record Docker Compose service status" \
   compose ps || exit 1
 
 printf '%s\n' "$remote_commit" >"$STATE_FILE.tmp"
 mv -f "$STATE_FILE.tmp" "$STATE_FILE"
+printf '%s\n' "$provision_signature" >"$PROVISION_STATE_FILE.tmp"
+mv -f "$PROVISION_STATE_FILE.tmp" "$PROVISION_STATE_FILE"
 
 log "Deploy completed successfully: HEAD=$remote_commit"

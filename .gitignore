@@ -9,7 +9,18 @@ wordpress/wp-content/debug.log
 # Local deployment logs.
 deployment/deploy.log*
 deployment/.last-successful-deploy*
+deployment/.last-successful-provision*
 .DS_Store
+
+# Go backend build/test artifacts.
+backend/bin/
+backend/coverage.out
+
+# Python ML artifacts are rebuilt deterministically from the tracked dataset.
+ml-service/artifacts/
+ml-service/.pytest_cache/
+ml-service/**/__pycache__/
+ml-service/.venv/
 
 # Local WordPress-generated content
 wordpress/wp-content/index.php

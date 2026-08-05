@@ -1,67 +1,93 @@
 # LoopBuy
 
-LoopBuy is a custom WordPress theme for a second-hand marketplace — a platform where users can browse, buy, sell, and message each other about pre-loved items, with a strong emphasis on trust and safety (AI-assisted scam screening, smart pricing suggestions, verified listings, and buyer/seller reviews).
+LoopBuy is a second-hand marketplace with a WordPress presentation layer and a standalone Go application backend. Marketplace data no longer belongs to the WordPress database: the Go API owns a separate MySQL 8.4 schema, Qdrant stores listing vectors, and a small FastAPI service provides transparent scam scoring and recommendation reranking.
 
-Built on the `_s` (underscores) starter theme, LoopBuy replaces the generic scaffold with a full set of custom page templates, a custom post type for listings, and client-side cart/wishlist/chat functionality.
+## Architecture
 
-## Features
-
-- **Homepage / Marketplace browse** (`index.php`) — searchable, filterable product grid with category pills, price range, condition, and location filters.
-- **Product detail page** (`page-product-detail.php`) — full listing view with images, price, seller info, "safety screened" badge, Add to Cart, Save, and Chat actions, plus product and seller review sections.
-- **Sell / Post a listing** (`page-sell.php`) — multi-field listing form (photos, title, price, brand, category, condition, location, description) with an AI price recommendation panel and AI scam-detection scan button. Creates a `loopbuy_listing` custom post type entry on submit.
-- **My Listings** (`page-my-listings.php`) — seller dashboard to view, edit, mark-as-sold, or delete their own listings.
-- **Cart** (`page-cart.php`) — quantity controls, running total, and checkout button; cart state is stored client-side so it works for guests too.
-- **Saved / Wishlist** (`page-saved.php`) — heart-to-save favourite listings.
-- **Messages** (`page-messages.php`) — per-listing chat interface with conversation history, opened from a product's Chat button.
-- **Orders** (`page-orders.php`) — order history with linked products and "Message seller" shortcuts.
-- **Account pages** — Login and Register (`page-login.php`, `page-register.php`) with nonce-protected forms, validation, and a "Continue with Google" placeholder; Profile (`page-profile.php`) for editing name, phone, location, bio, and avatar, plus a summary of the user's listings.
-- **About & Contact** (`page-about.php`, `page-contact.php`) — marketing/info page highlighting AI scam detection, smart pricing, real-time chat, and trusted reviews; contact form that emails the site admin.
-- **Dark mode toggle**, header search, and live cart/saved badge counts, available sitewide via `header.php` / `footer.php`.
-
-## How it's built
-
-- **Platform:** WordPress theme (PHP + the standard WordPress template hierarchy: `header.php`, `footer.php`, `page-*.php` templates, `functions.php`).
-- **Data:**
-  - Listings are a registered custom post type (`loopbuy_listing`) with meta fields for price, brand, category, condition, location, and status (active/sold).
-  - Users are standard WordPress users/subscribers, extended with usermeta (phone, location, bio, avatar).
-  - Demo/sample product data used across the browse, detail, cart, saved, and messages pages is centralised in `inc/product-data.php`.
-- **Frontend interactivity:** vanilla JavaScript (no framework) for cart, saved items, chat history, and dark mode, using `localStorage` so guests can shop without an account.
-- **Security:** WordPress nonces on all forms (login, register, sell, contact, profile), input sanitisation/escaping (`sanitize_text_field`, `esc_html`, `esc_attr`, etc.) throughout.
-- **Styling:** `style.css` (theme stylesheet with the required WordPress theme header).
-
-## Project structure
-
-```
-loopbuy/
-├── style.css                 # Theme stylesheet + theme header
-├── functions.php             # Theme setup, enqueue scripts/styles, CPT registration
-├── header.php / footer.php   # Global site chrome (nav, search, cart/saved badges, dark mode)
-├── index.php                 # Homepage — product browse/search/filter
-├── page-product-detail.php   # Single product view
-├── page-sell.php             # Create/post a listing
-├── page-my-listings.php      # Seller's own listings dashboard
-├── page-cart.php             # Shopping cart
-├── page-saved.php            # Saved/wishlist items
-├── page-messages.php         # Buyer–seller chat
-├── page-orders.php           # Order history
-├── page-login.php            # Login
-├── page-register.php         # Registration
-├── page-profile.php          # Account/profile settings
-├── page-about.php            # About/marketing page
-├── page-contact.php          # Contact form
-└── inc/
-    └── product-data.php      # Shared demo product data
+```text
+Browser
+  -> WordPress theme + same-origin marketplace session bridge
+       -> Go API
+            -> MySQL 8.4 (accounts and marketplace source of truth)
+            -> FastAPI / scikit-learn (scam score and reranking)
+            -> OpenAI embeddings -> Qdrant
+            -> Qwen chat completion over retrieved, revalidated listings
 ```
 
-## Getting started
+The WordPress/MariaDB database remains separate and is used only for WordPress itself. The supplied legacy `loopbuy_db.sql` is not imported over the application database; the reviewed, forward-only migrations under `backend/migrations` create the current schema.
 
-1. Copy the theme folder into `wp-content/themes/` in a WordPress install.
-2. Activate **LoopBuy** from *Appearance → Themes*.
-3. In *wp-admin*, create Pages with slugs matching the templates above (`sell`, `cart`, `saved`, `messages`, `orders`, `login`, `register`, `profile`, `about`, `contact`, `my-listings`) — WordPress will automatically pick up the matching `page-*.php` template for each.
-4. (Optional) Assign a menu to the **Primary** location under *Appearance → Menus*.
+## Implemented backend
 
-## Notes / next steps
+- Go HTTP API with 61 documented operations for password/email-verification and Google OAuth login, refresh/logout, profiles, categories, listings and local image uploads, favourites, carts, conversations/messages, moderation, recommendations, and persisted or stateless AI chat.
+- MySQL constraints, transactional writes, refresh-token rotation, ownership/role checks, privacy-safe account deletion (including owned listing media and DB-gated media reads), outbox-driven vector indexing, and optimistic listing revisions. A stale listing edit returns `409` instead of overwriting newer content or a moderation decision.
+- Scam screening with a versioned TF-IDF/logistic-regression baseline plus explicit lexical risk signals. Only a contract-valid low-risk result may publish automatically; every other state is held for review.
+- Recommendation retrieval from Qdrant with a content reranker and deterministic recent-listing fallback when embeddings are unavailable.
+- RAG assistant that treats vector text as untrusted context and rehydrates only active, approved listings from MySQL before producing sources. Qwen is used when configured; otherwise the API can return a clearly marked deterministic fallback.
+- OpenAPI 3.1 contract: [`backend/openapi.yaml`](backend/openapi.yaml). Detailed backend setup and endpoint map: [`backend/README.md`](backend/README.md).
 
-- Product, cart, and saved-item data currently live in demo arrays / `localStorage` for frontend demonstration — a backend teammate can wire these to the database (WooCommerce-style order/cart tables, or custom tables) without changing the templates' markup.
-- Listing delete/mark-as-sold actions call `admin-ajax.php` actions (`loopbuy_delete_listing`, `loopbuy_mark_listing_sold`) that still need to be implemented server-side.
-- "Continue with Google" and the AI price-suggestion / scam-detection buttons are UI placeholders pending integration with real auth and AI services.
+## WordPress connection
+
+The tracked MU plugins provide two explicit bridges:
+
+- `loopbuy-backend-bridge.php` makes the Go catalogue authoritative for browse and product-detail pages, with demo fixtures used only when the backend is unreachable or malformed—not when a healthy catalogue is empty. API-owned `/media/...` images are exposed through a MIME-checked, bounded, streaming same-origin proxy.
+- `loopbuy-marketplace-session.php` sends registration, login, refresh, profile, logout, and AI-assistant requests server-to-server. Marketplace access/refresh tokens are confined to bounded host-only `HttpOnly` cookies (`Secure` on HTTPS, `SameSite=Lax`); mutations also require a per-browser CSRF token and matching Origin/Referer. WordPress administrator authentication and capabilities remain independent.
+
+The header, registration, login, profile, sell, and `/ai-assistant/` templates use the Go account. The AI Finder page calls the same-origin WordPress BFF, renders grounded listing sources without exposing JWTs to JavaScript, and explicitly labels deterministic fallback answers when Qwen or embeddings are unavailable. Sell creates listings and uploads up to ten images through the same server-side boundary. Cart, saved-items, messages, orders, and my-listings have not all been migrated yet; some still use demo/localStorage behavior. Orders, reviews, password recovery, and avatar upload are shown as unavailable rather than faked.
+
+`deployment/provision-wordpress.php` idempotently creates the 15 required WordPress page records (including AI Finder, Privacy, and Terms), activates the LoopBuy theme, and configures permalinks. `deployment/deploy.sh` runs it after the containers are healthy and records a separate provisioning signature, so template routes do not require repeated wp-admin work. The WordPress installation itself must already have completed its one-time core installer.
+
+## Local startup
+
+Requirements: Docker Desktop with Compose v2.
+
+```powershell
+Copy-Item .env.example .env
+# Replace every password/key placeholder in .env. JWT_SECRET must be at least 32 characters.
+docker compose up -d --build
+```
+
+Defaults:
+
+- WordPress: `http://localhost:8080`
+- Go API: `http://localhost:8090`
+- API readiness: `http://localhost:8090/health/ready`
+
+The API is bound to host loopback and is reached publicly through the WordPress BFF; MySQL and Qdrant are internal-only. For loopback diagnostics only:
+
+```powershell
+docker compose -f compose.yaml -f compose.debug.yaml up -d
+```
+
+This exposes backend MySQL at `127.0.0.1:3307` and Qdrant at `127.0.0.1:6333` by default.
+
+Provider configuration lives only in `.env`/server environment:
+
+- `OPENAI_API_KEY`, embedding model/dimensions, and MySQL-backed global-hour/per-user-day request budgets;
+- `QDRANT_API_KEY`, the private internal password shared by the API and Qdrant, plus collection/vector settings;
+- `QWEN_API_KEY` for Qwen 3.5 Flash; the international HTTPS base URL and `qwen3.5-flash` model are defaults, with optional regional/model overrides;
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and an exact `GOOGLE_REDIRECT_URIS` allowlist;
+- independent `BFF_SHARED_SECRET` for signed, privacy-preserving per-client rate-limit buckets between WordPress and Go;
+- `RESEND_API_KEY`, verified `RESEND_FROM`, verification URL/TTL, and `RESEND_MAX_EMAILS_PER_HOUR`.
+
+Listing images persist in the `listing_media_data` volume on the host server. `DEMO_SEED_ENABLED=true` idempotently creates three sample sellers and twelve listings with repository-owned local photos; repeated starts do not duplicate them or enqueue duplicate embedding work.
+
+On a fresh host the normal deployment performs that seed automatically. To add or verify the catalogue later, run `bash ./deployment/seed-demo.sh`; see [`deployment/README.md`](deployment/README.md) for the guarded one-command workflow.
+
+Never expose provider keys to WordPress JavaScript or commit `.env`.
+
+## Verification
+
+```powershell
+Set-Location backend
+gofmt -d ./cmd ./internal
+go test ./...
+go vet ./...
+
+Set-Location ..
+docker build --target test -t loopbuy-ml-test ./ml-service
+docker run --rm --network none loopbuy-ml-test
+npx --yes @redocly/cli@2.44.1 lint backend/openapi.yaml
+docker compose --env-file .env.example config --quiet
+```
+
+Production deployment uses `deployment/deploy.sh`. It validates non-placeholder secrets, requires Qwen and OpenAI configuration, builds the two local images, waits for services, provisions WordPress routes, and records deployment state. Set `WORDPRESS_DEBUG=0` in production.

@@ -116,9 +116,7 @@ require get_template_directory()
 							<img
 								src="<?php
 								echo esc_url(
-									get_template_directory_uri()
-									. '/images/'
-									. $product['image']
+									loopbuy_product_image_url( $product )
 								);
 								?>"
 								alt="<?php

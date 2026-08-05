@@ -3,11 +3,59 @@
 /**
  * LoopBuy Product Data
  *
- * Temporary product data for frontend development.
- * Later this can be replaced with database data.
+ * Bundled product fixtures for frontend development and backend outages.
+ * When the LoopBuy Backend Bridge is available, its normalized API catalogue
+ * replaces this array at the bottom of the file.
  *
  * @package LoopBuy
  */
+
+if ( ! function_exists( 'loopbuy_product_image_url' ) ) {
+	/**
+	 * Resolve either an absolute API image URL or a bundled fixture filename.
+	 *
+	 * @param array $product Product view model.
+	 * @return string
+	 */
+	function loopbuy_product_image_url( $product ) {
+		if ( ! is_array( $product ) ) {
+			return '';
+		}
+
+		$image = '';
+
+		if ( isset( $product['image_url'] ) && is_string( $product['image_url'] ) ) {
+			$image = trim( $product['image_url'] );
+		}
+
+		if ( '' === $image && isset( $product['image'] ) && is_string( $product['image'] ) ) {
+			$image = trim( $product['image'] );
+		}
+
+		if ( '' === $image ) {
+			return '';
+		}
+
+		if ( function_exists( 'loopbuy_backend_public_image_url' ) ) {
+			$backend_image = loopbuy_backend_public_image_url( $image );
+
+			if ( '' !== $backend_image ) {
+				return $backend_image;
+			}
+		}
+
+		if ( preg_match( '#^https?://#i', $image ) ) {
+			return esc_url_raw( $image, array( 'http', 'https' ) );
+		}
+
+		// Fixture images must be plain filenames, never caller-controlled paths.
+		if ( preg_match( '#[\\\\/]#', $image ) ) {
+			return '';
+		}
+
+		return trailingslashit( get_template_directory_uri() . '/images' ) . rawurlencode( $image );
+	}
+}
 
 $products = [
 
@@ -27,7 +75,7 @@ $products = [
         'description' => 'iPhone 14 Pro in excellent condition with smooth performance and a high-quality camera. Suitable for everyday use, photography and work.',
         'seller' => 'Alex Tan',
         'views' => 28,
-        'verified' => true,
+        'verified' => false,
     ],
 
     [
@@ -42,7 +90,7 @@ $products = [
         'description' => 'Sony wireless headphones in good working condition with clear sound, comfortable ear cushions and reliable battery life.',
         'seller' => 'Sarah Lim',
         'views' => 17,
-        'verified' => true,
+        'verified' => false,
     ],
 
     [
@@ -57,7 +105,7 @@ $products = [
         'description' => 'Samsung Galaxy S23 in like-new condition. Fast performance, excellent display and great camera quality.',
         'seller' => 'Daniel Lee',
         'views' => 35,
-        'verified' => true,
+        'verified' => false,
     ],
 
     [
@@ -72,7 +120,7 @@ $products = [
         'description' => 'MacBook Air M2 in good condition. Lightweight and suitable for study, office work, programming and everyday use.',
         'seller' => 'Michael Ong',
         'views' => 42,
-        'verified' => true,
+        'verified' => false,
     ],
 
 
@@ -88,11 +136,11 @@ $products = [
         'location' => 'Tampines',
         'condition' => 'Like New',
         'category' => 'fashion',
-        'image' => 'Leather_jacket.jpg',
+		'image' => 'Leather_Jacket.jpg',
         'description' => 'Stylish Zara leather jacket in like-new condition. Comfortable fit and suitable for casual or evening wear.',
         'seller' => 'Emma Wong',
         'views' => 21,
-        'verified' => true,
+        'verified' => false,
     ],
 
     [
@@ -107,7 +155,7 @@ $products = [
         'description' => 'Nike running shoes in good condition with comfortable cushioning and lightweight support for running or daily use.',
         'seller' => 'Ryan Koh',
         'views' => 19,
-        'verified' => true,
+        'verified' => false,
     ],
 
     [
@@ -122,7 +170,7 @@ $products = [
         'description' => 'Classic Levi\'s denim jacket in good condition. Easy to match with casual outfits and suitable for everyday wear.',
         'seller' => 'Jason Tan',
         'views' => 15,
-        'verified' => true,
+        'verified' => false,
     ],
 
     [
@@ -137,7 +185,7 @@ $products = [
         'description' => 'Charles & Keith handbag in like-new condition with a clean interior and elegant design for everyday use.',
         'seller' => 'Chloe Lim',
         'views' => 26,
-        'verified' => true,
+        'verified' => false,
     ],
 
 
@@ -157,7 +205,7 @@ $products = [
         'description' => 'PlayStation 5 in excellent condition with smooth performance. Ideal for next-generation console gaming.',
         'seller' => 'Ethan Ng',
         'views' => 54,
-        'verified' => true,
+        'verified' => false,
     ],
 
     [
@@ -172,7 +220,7 @@ $products = [
         'description' => 'Nintendo Switch OLED in good condition with a bright display and portable gaming support.',
         'seller' => 'Lucas Chen',
         'views' => 31,
-        'verified' => true,
+        'verified' => false,
     ],
 
     [
@@ -187,7 +235,7 @@ $products = [
         'description' => 'Xbox Series S in good working condition. Compact console with fast loading and digital game support.',
         'seller' => 'Noah Lim',
         'views' => 24,
-        'verified' => true,
+        'verified' => false,
     ],
 
     [
@@ -202,7 +250,7 @@ $products = [
         'description' => 'Razer mechanical gaming keyboard in like-new condition with responsive switches and comfortable key spacing.',
         'seller' => 'Marcus Lee',
         'views' => 18,
-        'verified' => true,
+        'verified' => false,
     ],
 
 
@@ -222,7 +270,7 @@ $products = [
         'description' => 'Trek mountain bike in like-new condition. Suitable for park riding, trails and casual cycling.',
         'seller' => 'Aaron Goh',
         'views' => 29,
-        'verified' => true,
+        'verified' => false,
     ],
 
     [
@@ -237,7 +285,7 @@ $products = [
         'description' => 'Wilson tennis racket in good condition with a comfortable grip. Suitable for beginner and intermediate players.',
         'seller' => 'Kevin Tan',
         'views' => 14,
-        'verified' => true,
+        'verified' => false,
     ],
 
     [
@@ -252,7 +300,7 @@ $products = [
         'description' => 'Adidas football in good condition and suitable for casual matches, training or recreational use.',
         'seller' => 'Ben Lim',
         'views' => 11,
-        'verified' => true,
+        'verified' => false,
     ],
 
     [
@@ -267,7 +315,7 @@ $products = [
         'description' => 'Premium Manduka yoga mat in like-new condition with good grip and comfortable cushioning.',
         'seller' => 'Sophia Tan',
         'views' => 16,
-        'verified' => true,
+        'verified' => false,
     ],
 
 
@@ -287,7 +335,7 @@ $products = [
         'description' => 'Philips air fryer in good working condition. Easy to use and suitable for quick everyday cooking.',
         'seller' => 'Grace Lee',
         'views' => 23,
-        'verified' => true,
+        'verified' => false,
     ],
 
     [
@@ -302,7 +350,7 @@ $products = [
         'description' => 'Panasonic microwave oven in good condition with simple controls and reliable heating performance.',
         'seller' => 'Henry Lim',
         'views' => 13,
-        'verified' => true,
+        'verified' => false,
     ],
 
     [
@@ -317,7 +365,7 @@ $products = [
         'description' => 'Dyson vacuum cleaner in like-new condition with strong suction and convenient cordless cleaning.',
         'seller' => 'Olivia Ng',
         'views' => 36,
-        'verified' => true,
+        'verified' => false,
     ],
 
     [
@@ -332,7 +380,7 @@ $products = [
         'description' => 'Nespresso coffee machine in like-new condition. Compact design and ideal for making quick coffee at home.',
         'seller' => 'Rachel Tan',
         'views' => 22,
-        'verified' => true,
+        'verified' => false,
     ],
 
 
@@ -352,7 +400,7 @@ $products = [
         'description' => 'Harry Potter book set published by Bloomsbury. Books are in good readable condition with minor signs of use.',
         'seller' => 'Emily Koh',
         'views' => 20,
-        'verified' => true,
+        'verified' => false,
     ],
 
     [
@@ -367,7 +415,7 @@ $products = [
         'description' => 'Atomic Habits by James Clear in like-new condition with clean pages and minimal signs of use.',
         'seller' => 'Natalie Lim',
         'views' => 27,
-        'verified' => true,
+        'verified' => false,
     ],
 
     [
@@ -382,7 +430,7 @@ $products = [
         'description' => 'Python programming reference book in good condition. Useful for students and beginner developers.',
         'seller' => 'David Ong',
         'views' => 19,
-        'verified' => true,
+        'verified' => false,
     ],
 
     [
@@ -397,7 +445,7 @@ $products = [
         'description' => 'The Psychology of Money by Morgan Housel in like-new condition with clean pages and cover.',
         'seller' => 'Amanda Lee',
         'views' => 25,
-        'verified' => true,
+        'verified' => false,
     ],
 
 
@@ -417,7 +465,7 @@ $products = [
         'description' => 'Spacious IKEA wooden study desk in good condition. Suitable for studying, working or a computer setup.',
         'seller' => 'Jonathan Tan',
         'views' => 30,
-        'verified' => true,
+        'verified' => false,
     ],
 
     [
@@ -432,7 +480,7 @@ $products = [
         'description' => 'Comfortable IKEA office chair in good condition with adjustable height and supportive backrest.',
         'seller' => 'Samuel Lim',
         'views' => 18,
-        'verified' => true,
+        'verified' => false,
     ],
 
     [
@@ -447,7 +495,7 @@ $products = [
         'description' => 'Castlery three-seater sofa in like-new condition. Comfortable seating with a modern design for living rooms.',
         'seller' => 'Michelle Ng',
         'views' => 41,
-        'verified' => true,
+        'verified' => false,
     ],
 
     [
@@ -462,7 +510,7 @@ $products = [
         'description' => 'Minimalist Muji bedside table in good condition with useful storage space and a clean wooden finish.',
         'seller' => 'Nicole Tan',
         'views' => 13,
-        'verified' => true,
+        'verified' => false,
     ],
 
 
@@ -482,7 +530,7 @@ $products = [
         'description' => 'Yamaha acoustic guitar in good condition with a warm sound. Suitable for beginners and casual players.',
         'seller' => 'Chris Lee',
         'views' => 22,
-        'verified' => true,
+        'verified' => false,
     ],
 
     [
@@ -497,7 +545,7 @@ $products = [
         'description' => 'Canon digital camera in like-new condition with clear image quality. Suitable for travel and everyday photography.',
         'seller' => 'Justin Wong',
         'views' => 34,
-        'verified' => true,
+        'verified' => false,
     ],
 
     [
@@ -512,7 +560,7 @@ $products = [
         'description' => 'Samsonite travel suitcase in good condition with smooth wheels, secure zippers and spacious storage.',
         'seller' => 'Rebecca Lim',
         'views' => 16,
-        'verified' => true,
+        'verified' => false,
     ],
 
     [
@@ -527,7 +575,31 @@ $products = [
         'description' => 'Fender electric guitar in like-new condition with excellent sound and a comfortable neck for playing.',
         'seller' => 'Andrew Tan',
         'views' => 39,
-        'verified' => true,
+        'verified' => false,
     ],
 
 ];
+
+// Fixtures have not been screened by the backend and must never display an
+// approved/low-risk badge merely because the API is unavailable.
+foreach ( $products as &$loopbuy_fixture_product ) {
+	$loopbuy_fixture_product['verified']          = false;
+	$loopbuy_fixture_product['safety_state']      = 'unavailable';
+	$loopbuy_fixture_product['moderation_status'] = '';
+	$loopbuy_fixture_product['scam_label']        = '';
+}
+unset( $loopbuy_fixture_product );
+
+// A caller performing a failure-only fallback can suppress the catalogue
+// request so these bundled fixtures remain the actual fallback data.
+if ( empty( $loopbuy_skip_backend_catalog ) && function_exists( 'loopbuy_backend_get_public_products' ) ) {
+	$loopbuy_api_products = loopbuy_backend_get_public_products();
+
+	// A successful empty response is authoritative. Only transport or contract
+	// failures return WP_Error and retain the bundled fixtures above.
+	if ( ! is_wp_error( $loopbuy_api_products ) ) {
+		$products = $loopbuy_api_products;
+	}
+
+	unset( $loopbuy_api_products );
+}

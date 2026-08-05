@@ -1,0 +1,8 @@
+services:
+  backend-db:
+    ports:
+      - "127.0.0.1:${BACKEND_DB_EXPOSE_PORT:-3307}:3306"
+
+  qdrant:
+    ports:
+      - "127.0.0.1:${QDRANT_PORT:-6333}:6333"
