@@ -612,6 +612,26 @@ function loopbuy_marketplace_register_rest_routes() {
 			'permission_callback' => '__return_true',
 		)
 	);
+
+	register_rest_route(
+		'loopbuy/v1',
+		'/favourites',
+		array(
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => 'loopbuy_marketplace_favourites_rest',
+			'permission_callback' => '__return_true',
+		)
+	);
+
+	register_rest_route(
+		'loopbuy/v1',
+		'/favourites/(?P<listing_id>[1-9][0-9]*)',
+		array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'callback'            => 'loopbuy_marketplace_favourite_mutation',
+			'permission_callback' => '__return_true',
+		)
+	);
 }
 
 add_action( 'rest_api_init', 'loopbuy_marketplace_register_rest_routes' );
@@ -677,7 +697,7 @@ function loopbuy_marketplace_bff_headers( $method, $path, $timestamp = null ) {
 		: '';
 
 	if ( '' === $secret
-		|| ! in_array( $method, array( 'GET', 'POST', 'PATCH' ), true )
+		|| ! in_array( $method, array( 'GET', 'POST', 'PUT', 'PATCH', 'DELETE' ), true )
 		|| '' === $path
 		|| false === filter_var( $remote_addr, FILTER_VALIDATE_IP ) ) {
 		return array();
@@ -720,7 +740,7 @@ function loopbuy_marketplace_api_request( $method, $path, $payload = null, $acce
 	$method = strtoupper( (string) $method );
 	$path   = loopbuy_marketplace_bff_api_path( $path );
 
-	if ( ! in_array( $method, array( 'GET', 'POST', 'PATCH' ), true ) || '' === $path ) {
+	if ( ! in_array( $method, array( 'GET', 'POST', 'PUT', 'PATCH', 'DELETE' ), true ) || '' === $path ) {
 		return new WP_Error( 'loopbuy_marketplace_invalid_api_request', __( 'The marketplace API request is invalid.', 'loopbuy' ) );
 	}
 
@@ -844,7 +864,9 @@ function loopbuy_marketplace_normalize_user( $payload ) {
 		: '';
 
 	if ( '' !== $image ) {
-		$image = esc_url_raw( $image, array( 'http', 'https' ) );
+		$image = function_exists( 'loopbuy_backend_public_image_url' )
+			? loopbuy_backend_public_image_url( $image )
+			: esc_url_raw( $image, array( 'http', 'https' ) );
 	}
 
 	return array(
@@ -1269,6 +1291,250 @@ function loopbuy_marketplace_assistant_chat( $request ) {
 	$response = new WP_REST_Response( $data, 200 );
 	$response->header( 'Cache-Control', 'private, no-store, max-age=0, must-revalidate' );
 	return $response;
+}
+
+/**
+ * Normalize the listing collection returned by an authenticated endpoint.
+ *
+ * @param mixed  $payload    Backend response payload.
+ * @param string $error_code Local error identifier.
+ * @return array|WP_Error
+ */
+function loopbuy_marketplace_normalize_listing_collection( $payload, $error_code ) {
+	if ( ! is_array( $payload ) || ! isset( $payload['items'] ) || ! is_array( $payload['items'] ) || ! function_exists( 'loopbuy_backend_normalize_listing' ) ) {
+		return new WP_Error( $error_code, __( 'Marketplace listings returned an invalid response.', 'loopbuy' ) );
+	}
+
+	$products = array();
+
+	foreach ( $payload['items'] as $item ) {
+		$product = loopbuy_backend_normalize_listing( $item );
+
+		if ( is_wp_error( $product ) ) {
+			return new WP_Error( $error_code, __( 'Marketplace listings returned an invalid response.', 'loopbuy' ) );
+		}
+
+		$products[] = $product;
+	}
+
+	return $products;
+}
+
+/**
+ * Return the current account's saved listings from MySQL.
+ *
+ * @param bool $force Ignore the request-local cache.
+ * @return array|WP_Error
+ */
+function loopbuy_marketplace_list_favourites( $force = false ) {
+	if ( ! $force && array_key_exists( 'loopbuy_marketplace_request_favourites', $GLOBALS ) ) {
+		return $GLOBALS['loopbuy_marketplace_request_favourites'];
+	}
+
+	$response = loopbuy_marketplace_authenticated_request( 'GET', '/api/v1/users/me/favourites' );
+
+	if ( is_wp_error( $response ) ) {
+		$GLOBALS['loopbuy_marketplace_request_favourites'] = $response;
+		return $response;
+	}
+
+	if ( 200 !== $response['status'] ) {
+		$error = new WP_Error( 'loopbuy_marketplace_favourites_failed', __( 'Saved listings could not be loaded right now.', 'loopbuy' ) );
+		$GLOBALS['loopbuy_marketplace_request_favourites'] = $error;
+		return $error;
+	}
+
+	$products = loopbuy_marketplace_normalize_listing_collection( $response['data'], 'loopbuy_marketplace_invalid_favourites' );
+	$GLOBALS['loopbuy_marketplace_request_favourites'] = $products;
+	return $products;
+}
+
+/**
+ * Return every listing owned by the current account, including review states.
+ *
+ * @param bool $force Ignore the request-local cache.
+ * @return array|WP_Error
+ */
+function loopbuy_marketplace_my_listings( $force = false ) {
+	if ( ! $force && array_key_exists( 'loopbuy_marketplace_request_listings', $GLOBALS ) ) {
+		return $GLOBALS['loopbuy_marketplace_request_listings'];
+	}
+
+	$response = loopbuy_marketplace_authenticated_request( 'GET', '/api/v1/users/me/listings' );
+
+	if ( is_wp_error( $response ) ) {
+		$GLOBALS['loopbuy_marketplace_request_listings'] = $response;
+		return $response;
+	}
+
+	if ( 200 !== $response['status'] ) {
+		$error = new WP_Error( 'loopbuy_marketplace_my_listings_failed', __( 'Your listings could not be loaded right now.', 'loopbuy' ) );
+		$GLOBALS['loopbuy_marketplace_request_listings'] = $error;
+		return $error;
+	}
+
+	$products = loopbuy_marketplace_normalize_listing_collection( $response['data'], 'loopbuy_marketplace_invalid_my_listings' );
+	$GLOBALS['loopbuy_marketplace_request_listings'] = $products;
+	return $products;
+}
+
+/**
+ * Load one listing through the authenticated API so its owner can preview a
+ * pending or under-review listing without exposing it publicly.
+ *
+ * @param int|string $listing_id Positive listing ID.
+ * @return array|null|WP_Error
+ */
+function loopbuy_marketplace_get_listing( $listing_id ) {
+	$listing_id = is_numeric( $listing_id ) ? (int) $listing_id : 0;
+
+	if ( $listing_id < 1 ) {
+		return new WP_Error( 'loopbuy_marketplace_invalid_listing_id', __( 'The listing ID is invalid.', 'loopbuy' ) );
+	}
+
+	$response = loopbuy_marketplace_authenticated_request( 'GET', '/api/v1/listings/' . $listing_id );
+
+	if ( is_wp_error( $response ) ) {
+		return $response;
+	}
+
+	if ( 404 === $response['status'] || 204 === $response['status'] ) {
+		return null;
+	}
+
+	if ( 200 !== $response['status'] || ! function_exists( 'loopbuy_backend_normalize_listing' ) ) {
+		return new WP_Error( 'loopbuy_marketplace_listing_failed', __( 'The listing could not be loaded right now.', 'loopbuy' ) );
+	}
+
+	return loopbuy_backend_normalize_listing( $response['data'] );
+}
+
+/**
+ * Build a bounded public error for the favourites REST bridge.
+ *
+ * @param int    $status HTTP status.
+ * @param string $code   Stable problem identifier.
+ * @param string $detail Public detail.
+ * @return WP_REST_Response
+ */
+function loopbuy_marketplace_favourite_problem( $status, $code, $detail ) {
+	$status = (int) $status;
+	$status = $status >= 400 && $status <= 599 ? $status : 502;
+	$code   = sanitize_key( (string) $code );
+
+	$response = new WP_REST_Response(
+		array(
+			'type'     => home_url( '/problems/' . $code ),
+			'title'    => __( 'Saved listing request failed', 'loopbuy' ),
+			'status'   => $status,
+			'detail'   => sanitize_text_field( (string) $detail ),
+			'instance' => rest_url( 'loopbuy/v1/favourites' ),
+		),
+		$status
+	);
+	$response->header( 'Content-Type', 'application/problem+json; charset=UTF-8' );
+	$response->header( 'Cache-Control', 'private, no-store, max-age=0, must-revalidate' );
+	return $response;
+}
+
+/**
+ * Return the canonical saved IDs for client-side button synchronisation.
+ *
+ * @return WP_REST_Response
+ */
+function loopbuy_marketplace_favourites_rest() {
+	loopbuy_marketplace_send_private_headers();
+	$products = loopbuy_marketplace_list_favourites( true );
+
+	if ( is_wp_error( $products ) ) {
+		$code = $products->get_error_code();
+
+		if ( in_array( $code, array( 'loopbuy_marketplace_auth_required', 'loopbuy_marketplace_session_expired' ), true ) ) {
+			return loopbuy_marketplace_favourite_problem( 401, 'authentication-required', __( 'Please log in to view saved listings.', 'loopbuy' ) );
+		}
+
+		$status = 'loopbuy_marketplace_backend_unavailable' === $code ? 503 : 502;
+		return loopbuy_marketplace_favourite_problem( $status, 'saved-listings-unavailable', __( 'Saved listings are temporarily unavailable.', 'loopbuy' ) );
+	}
+
+	$ids = array();
+	foreach ( $products as $product ) {
+		if ( isset( $product['id'] ) ) {
+			$ids[] = (int) $product['id'];
+		}
+	}
+
+	$response = new WP_REST_Response(
+		array(
+			'items' => $products,
+			'ids'   => $ids,
+		),
+		200
+	);
+	$response->header( 'Cache-Control', 'private, no-store, max-age=0, must-revalidate' );
+	return $response;
+}
+
+/**
+ * Add or remove one saved listing through the authenticated same-origin BFF.
+ *
+ * @param WP_REST_Request $request REST request.
+ * @return WP_REST_Response
+ */
+function loopbuy_marketplace_favourite_mutation( $request ) {
+	loopbuy_marketplace_send_private_headers();
+
+	$verified = loopbuy_marketplace_verify_mutation( $request->get_header( 'x-loopbuy-csrf' ) );
+
+	if ( is_wp_error( $verified ) ) {
+		$status = in_array( $verified->get_error_code(), array( 'loopbuy_marketplace_cross_origin', 'loopbuy_marketplace_csrf_failed' ), true ) ? 403 : 405;
+		return loopbuy_marketplace_favourite_problem( $status, 'request-rejected', __( 'Reload the page and try again.', 'loopbuy' ) );
+	}
+
+	$payload    = $request->get_json_params();
+	$listing_id = (int) $request->get_param( 'listing_id' );
+
+	if ( $listing_id < 1 || ! is_array( $payload ) || 1 !== count( $payload ) || ! array_key_exists( 'saved', $payload ) || ! is_bool( $payload['saved'] ) ) {
+		return loopbuy_marketplace_favourite_problem( 400, 'invalid-request', __( 'Send one boolean saved field.', 'loopbuy' ) );
+	}
+
+	$saved    = $payload['saved'];
+	$method   = $saved ? 'PUT' : 'DELETE';
+	$response = loopbuy_marketplace_authenticated_request( $method, '/api/v1/users/me/favourites/' . $listing_id );
+
+	if ( is_wp_error( $response ) ) {
+		$code = $response->get_error_code();
+
+		if ( in_array( $code, array( 'loopbuy_marketplace_auth_required', 'loopbuy_marketplace_session_expired' ), true ) ) {
+			return loopbuy_marketplace_favourite_problem( 401, 'authentication-required', __( 'Please log in to save listings.', 'loopbuy' ) );
+		}
+
+		$status = 'loopbuy_marketplace_backend_unavailable' === $code ? 503 : 502;
+		return loopbuy_marketplace_favourite_problem( $status, 'saved-listing-unavailable', __( 'Saved listings are temporarily unavailable.', 'loopbuy' ) );
+	}
+
+	if ( 204 !== $response['status'] ) {
+		if ( 401 === $response['status'] ) {
+			return loopbuy_marketplace_favourite_problem( 401, 'authentication-required', __( 'Please log in to save listings.', 'loopbuy' ) );
+		}
+
+		if ( 404 === $response['status'] ) {
+			return loopbuy_marketplace_favourite_problem( 404, 'listing-not-found', __( 'That listing is no longer available.', 'loopbuy' ) );
+		}
+
+		return loopbuy_marketplace_favourite_problem( 502, 'saved-listing-failed', __( 'The saved listing could not be updated right now.', 'loopbuy' ) );
+	}
+
+	unset( $GLOBALS['loopbuy_marketplace_request_favourites'] );
+	$result = new WP_REST_Response(
+		array(
+			'listing_id' => $listing_id,
+			'saved'      => $saved,
+		),
+		200
+	);
+	$result->header( 'Cache-Control', 'private, no-store, max-age=0, must-revalidate' );
+	return $result;
 }
 
 /**
@@ -1799,15 +2065,88 @@ function loopbuy_marketplace_build_image_multipart( $file, $sort_order, $is_prim
 }
 
 /**
+ * Validate and encode one profile photo using the avatar upload contract.
+ *
+ * @param array $file One normalized $_FILES row.
+ * @return array|WP_Error Body and content type.
+ */
+function loopbuy_marketplace_build_avatar_multipart( $file ) {
+	if ( ! is_array( $file )
+		|| ! isset( $file['error'], $file['size'], $file['tmp_name'], $file['name'] )
+		|| UPLOAD_ERR_OK !== (int) $file['error']
+		|| ! is_string( $file['tmp_name'] )
+		|| ! is_uploaded_file( $file['tmp_name'] )
+		|| (int) $file['size'] < 1
+		|| (int) $file['size'] > 2 * MB_IN_BYTES ) {
+		return new WP_Error( 'loopbuy_marketplace_invalid_avatar_upload', __( 'Choose a profile photo no larger than 2 MB.', 'loopbuy' ) );
+	}
+
+	$filename  = sanitize_file_name( is_string( $file['name'] ) ? $file['name'] : '' );
+	$extension = strtolower( (string) pathinfo( $filename, PATHINFO_EXTENSION ) );
+	$types     = array(
+		'jpg'  => 'image/jpeg',
+		'jpeg' => 'image/jpeg',
+		'png'  => 'image/png',
+		'webp' => 'image/webp',
+	);
+
+	if ( '' === $filename || ! isset( $types[ $extension ] ) || ! class_exists( 'finfo' ) || ! function_exists( 'wp_getimagesize' ) ) {
+		return new WP_Error( 'loopbuy_marketplace_invalid_avatar_type', __( 'Use a JPEG, PNG, or WebP profile photo.', 'loopbuy' ) );
+	}
+
+	$finfo      = new finfo( FILEINFO_MIME_TYPE );
+	$mime_type  = (string) $finfo->file( $file['tmp_name'] );
+	$dimensions = wp_getimagesize( $file['tmp_name'] );
+
+	if ( $types[ $extension ] !== $mime_type
+		|| ! is_array( $dimensions )
+		|| ! isset( $dimensions[0], $dimensions[1], $dimensions['mime'] )
+		|| $mime_type !== $dimensions['mime']
+		|| (int) $dimensions[0] < 1
+		|| (int) $dimensions[1] < 1
+		|| (int) $dimensions[0] > 4096
+		|| (int) $dimensions[1] > 4096
+		|| (int) $dimensions[0] * (int) $dimensions[1] > 16000000 ) {
+		return new WP_Error( 'loopbuy_marketplace_invalid_avatar_type', __( 'Use a valid JPEG, PNG, or WebP no larger than 4096 by 4096 pixels.', 'loopbuy' ) );
+	}
+
+	$contents = file_get_contents( $file['tmp_name'] );
+
+	if ( false === $contents || strlen( $contents ) !== (int) $file['size'] ) {
+		return new WP_Error( 'loopbuy_marketplace_avatar_read_failed', __( 'The profile photo could not be read.', 'loopbuy' ) );
+	}
+
+	try {
+		$boundary = 'loopbuy-' . bin2hex( random_bytes( 18 ) );
+	} catch ( Exception $error ) {
+		return new WP_Error( 'loopbuy_marketplace_multipart_failed', __( 'The profile photo could not be prepared.', 'loopbuy' ) );
+	}
+
+	$disposition_name = str_replace( array( '"', "\r", "\n" ), '', $filename );
+	$body             = '--' . $boundary . "\r\n";
+	$body            .= 'Content-Disposition: form-data; name="image"; filename="' . $disposition_name . '"' . "\r\n";
+	$body            .= 'Content-Type: ' . $mime_type . "\r\n\r\n";
+	$body            .= $contents . "\r\n--" . $boundary . "--\r\n";
+
+	return array(
+		'body'         => $body,
+		'content_type' => 'multipart/form-data; boundary=' . $boundary,
+	);
+}
+
+/**
  * Send a prebuilt multipart body using a bearer token held only by the BFF.
  *
- * @param string $path         Fixed listing image path.
+ * @param string $path         Fixed listing-image or current-user avatar path.
  * @param array  $multipart    Encoded body and content type.
  * @param string $access_token Backend access token.
  * @return array|WP_Error
  */
 function loopbuy_marketplace_multipart_request( $path, $multipart, $access_token ) {
-	if ( 1 !== preg_match( '#^/api/v1/listings/[1-9][0-9]*/images/upload$#D', $path )
+	$is_listing_image = 1 === preg_match( '#^/api/v1/listings/[1-9][0-9]*/images/upload$#D', $path );
+	$is_avatar        = '/api/v1/users/me/avatar' === $path;
+
+	if ( ( ! $is_listing_image && ! $is_avatar )
 		|| ! is_array( $multipart )
 		|| ! isset( $multipart['body'], $multipart['content_type'] )
 		|| ! loopbuy_marketplace_valid_token( $access_token ) ) {
@@ -1932,6 +2271,87 @@ function loopbuy_marketplace_upload_listing_image( $listing_id, $file, $sort_ord
 	}
 
 	return $response['data'];
+}
+
+/**
+ * Upload and replace the current account's locally hosted profile photo.
+ *
+ * @param array $file       Normalized PHP upload.
+ * @param mixed $csrf_token Submitted CSRF token.
+ * @return array|WP_Error Updated normalized user.
+ */
+function loopbuy_marketplace_upload_avatar( $file, $csrf_token ) {
+	$verified = loopbuy_marketplace_verify_mutation( $csrf_token );
+
+	if ( is_wp_error( $verified ) ) {
+		return $verified;
+	}
+
+	$current = loopbuy_marketplace_current_user();
+
+	if ( is_wp_error( $current ) ) {
+		return $current;
+	}
+
+	if ( ! is_array( $current ) ) {
+		return new WP_Error( 'loopbuy_marketplace_auth_required', __( 'Please log in to update your profile photo.', 'loopbuy' ) );
+	}
+
+	$multipart = loopbuy_marketplace_build_avatar_multipart( $file );
+
+	if ( is_wp_error( $multipart ) ) {
+		return $multipart;
+	}
+
+	$names        = loopbuy_marketplace_cookie_names();
+	$access_token = loopbuy_marketplace_read_cookie( $names['access'] );
+
+	if ( ! loopbuy_marketplace_valid_token( $access_token ) ) {
+		$refreshed = loopbuy_marketplace_refresh_session();
+
+		if ( is_wp_error( $refreshed ) ) {
+			return $refreshed;
+		}
+
+		$access_token = loopbuy_marketplace_read_cookie( $names['access'] );
+	}
+
+	$path     = '/api/v1/users/me/avatar';
+	$response = loopbuy_marketplace_multipart_request( $path, $multipart, $access_token );
+
+	if ( ! is_wp_error( $response ) && 401 === $response['status'] ) {
+		$refreshed = loopbuy_marketplace_refresh_session();
+
+		if ( is_wp_error( $refreshed ) ) {
+			return $refreshed;
+		}
+
+		$response = loopbuy_marketplace_multipart_request(
+			$path,
+			$multipart,
+			loopbuy_marketplace_read_cookie( $names['access'] )
+		);
+	}
+
+	if ( is_wp_error( $response ) ) {
+		return $response;
+	}
+
+	if ( 200 !== $response['status'] ) {
+		$message = in_array( $response['status'], array( 413, 415, 422 ), true )
+			? loopbuy_marketplace_problem_message( $response, __( 'The profile photo could not be accepted.', 'loopbuy' ) )
+			: __( 'The profile photo could not be uploaded right now.', 'loopbuy' );
+		return new WP_Error( 'loopbuy_marketplace_avatar_upload_failed', $message );
+	}
+
+	$user = loopbuy_marketplace_normalize_user( $response['data'] );
+
+	if ( is_wp_error( $user ) ) {
+		return $user;
+	}
+
+	loopbuy_marketplace_set_request_user( $user );
+	return $user;
 }
 
 /**

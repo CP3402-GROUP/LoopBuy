@@ -138,8 +138,10 @@ add_action( 'widgets_init', 'loopbuy_widgets_init' );
  * Enqueue scripts and styles.
  */
 function loopbuy_scripts() {
-	$loopbuy_style_path    = get_stylesheet_directory() . '/style.css';
-	$loopbuy_style_version = is_file( $loopbuy_style_path ) ? (string) filemtime( $loopbuy_style_path ) : _S_VERSION;
+	$loopbuy_style_path        = get_stylesheet_directory() . '/style.css';
+	$loopbuy_style_version     = is_file( $loopbuy_style_path ) ? (string) filemtime( $loopbuy_style_path ) : _S_VERSION;
+	$loopbuy_favourite_path    = get_template_directory() . '/js/favourite.js';
+	$loopbuy_favourite_version = is_file( $loopbuy_favourite_path ) ? (string) filemtime( $loopbuy_favourite_path ) : _S_VERSION;
 
 	wp_enqueue_style( 'loopbuy-style', get_stylesheet_uri(), array(), $loopbuy_style_version );
 	wp_style_add_data( 'loopbuy-style', 'rtl', 'replace' );
@@ -153,7 +155,7 @@ function loopbuy_scripts() {
 		get_template_directory_uri()
 			. '/js/favourite.js',
 		array(),
-		_S_VERSION,
+		$loopbuy_favourite_version,
 		true
 	);
 

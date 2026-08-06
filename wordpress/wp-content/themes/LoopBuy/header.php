@@ -9,20 +9,37 @@
  * @package LoopBuy
  */
 
-//Saved / Cart badge counts.
-// Saved items are tracked client-side in localStorage as a flat array of
-// product IDs (key: loopbuy_saved_products) — written by page-saved.php.
-// Cart items are tracked client-side in localStorage as a map of
-// product id -> quantity (key: loopbuy_cart_items) — written by
-// page-cart.php and page-product-detail.php's "Add to Cart" button.
-// Since this data lives in the browser (works for guests too), the counts
-// below are filled in by JS on load rather than rendered from PHP.
+// Marketplace account state used by the header and same-origin controllers.
 $loopbuy_marketplace_user = function_exists( 'loopbuy_marketplace_current_user' )
 	? loopbuy_marketplace_current_user()
 	: new WP_Error( 'loopbuy_marketplace_bridge_unavailable', __( 'Marketplace account service is unavailable.', 'loopbuy' ) );
 $loopbuy_marketplace_csrf = is_array( $loopbuy_marketplace_user ) && function_exists( 'loopbuy_marketplace_csrf_token' )
 	? loopbuy_marketplace_csrf_token()
 	: null;
+$loopbuy_favourites_initial_ids = array();
+
+if ( is_array( $loopbuy_marketplace_user ) && function_exists( 'loopbuy_marketplace_list_favourites' ) ) {
+	$loopbuy_header_favourites = loopbuy_marketplace_list_favourites();
+
+	if ( is_array( $loopbuy_header_favourites ) ) {
+		foreach ( $loopbuy_header_favourites as $loopbuy_header_favourite ) {
+			if ( is_array( $loopbuy_header_favourite )
+				&& isset( $loopbuy_header_favourite['id'] )
+				&& is_numeric( $loopbuy_header_favourite['id'] )
+				&& (int) $loopbuy_header_favourite['id'] > 0 ) {
+				$loopbuy_favourites_initial_ids[] = (int) $loopbuy_header_favourite['id'];
+			}
+		}
+	}
+}
+
+$loopbuy_favourites_config = array(
+	'endpoint'      => rest_url( 'loopbuy/v1/favourites' ),
+	'csrf'          => is_string( $loopbuy_marketplace_csrf ) ? $loopbuy_marketplace_csrf : '',
+	'authenticated' => is_array( $loopbuy_marketplace_user ),
+	'loginUrl'      => home_url( '/login/' ),
+	'initialIds'    => array_values( array_unique( $loopbuy_favourites_initial_ids ) ),
+);
 ?>
 
 <!doctype html>
@@ -60,6 +77,15 @@ $loopbuy_marketplace_csrf = is_array( $loopbuy_marketplace_user ) && function_ex
 			}
 		} catch (error) {}
 	})();
+	</script>
+
+	<script>
+	window.loopbuyFavourites = <?php
+	echo wp_json_encode(
+		$loopbuy_favourites_config,
+		JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+	);
+	?>;
 	</script>
 
 	<?php wp_head(); ?>
@@ -860,13 +886,12 @@ $loopbuy_marketplace_csrf = is_array( $loopbuy_marketplace_user ) && function_ex
 
 
 			<!-- ==========================================
-			     SAVED AND CART BADGES
+			     CART BADGE
 			=========================================== -->
 
 			<script>
 			(function () {
 
-				var SAVED_KEY = 'loopbuy_saved_products';
 				var CART_KEY = 'loopbuy_cart_items';
 
 
@@ -889,26 +914,7 @@ $loopbuy_marketplace_csrf = is_array( $loopbuy_marketplace_user ) && function_ex
 
 
 				function refreshBadges() {
-					var savedCount = 0;
 					var cartCount = 0;
-
-
-					try {
-						var rawSaved =
-							window.localStorage.getItem(
-								SAVED_KEY
-							);
-
-						var savedIds =
-							rawSaved
-								? JSON.parse(rawSaved)
-								: [];
-
-						savedCount =
-							Array.isArray(savedIds)
-								? savedIds.length
-								: 0;
-					} catch (error) {}
 
 
 					try {
@@ -941,11 +947,6 @@ $loopbuy_marketplace_csrf = is_array( $loopbuy_marketplace_user ) && function_ex
 
 
 					updateBadge(
-						'[data-saved-count]',
-						savedCount
-					);
-
-					updateBadge(
 						'[data-cart-count]',
 						cartCount
 					);
@@ -961,10 +962,7 @@ $loopbuy_marketplace_csrf = is_array( $loopbuy_marketplace_user ) && function_ex
 				window.addEventListener(
 					'storage',
 					function (event) {
-						if (
-							event.key === SAVED_KEY ||
-							event.key === CART_KEY
-						) {
+						if (event.key === CART_KEY) {
 							refreshBadges();
 						}
 					}

@@ -151,6 +151,8 @@ func New(config Config) http.Handler {
 	mux.Handle("GET /api/v1/users/me", server.authenticated(http.HandlerFunc(server.getMe)))
 	mux.Handle("PATCH /api/v1/users/me", server.authenticated(http.HandlerFunc(server.updateMe)))
 	mux.Handle("DELETE /api/v1/users/me", server.authenticated(http.HandlerFunc(server.deleteMe)))
+	mux.Handle("GET /api/v1/users/me/listings", server.authenticated(http.HandlerFunc(server.listMyListings)))
+	mux.Handle("POST /api/v1/users/me/avatar", server.authenticated(server.rateLimited("profile-avatar-upload", 20, time.Hour, false, http.HandlerFunc(server.uploadMyAvatar))))
 	mux.HandleFunc("GET /api/v1/users/{id}", server.getPublicUser)
 	mux.Handle("GET /api/v1/users/me/favourites", server.authenticated(http.HandlerFunc(server.listFavourites)))
 	mux.Handle("PUT /api/v1/users/me/favourites/{listingId}", server.authenticated(http.HandlerFunc(server.addFavourite)))

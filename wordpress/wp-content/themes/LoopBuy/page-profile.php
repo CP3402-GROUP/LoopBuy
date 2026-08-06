@@ -11,6 +11,7 @@
  */
 
 $loopbuy_profile_sent = false;
+$loopbuy_avatar_sent  = false;
 $loopbuy_profile_errs = array();
 $request_method       = isset( $_SERVER['REQUEST_METHOD'] ) ? strtoupper( (string) $_SERVER['REQUEST_METHOD'] ) : 'GET';
 $loopbuy_user         = function_exists( 'loopbuy_marketplace_current_user' )
@@ -33,31 +34,47 @@ if ( isset( $_GET['loopbuy_auth_error'] ) && is_string( $_GET['loopbuy_auth_erro
 }
 
 if ( 'POST' === $request_method && is_array( $loopbuy_user ) ) {
-	if ( ! empty( $_FILES['loopbuy_avatar']['name'] ) ) {
-		$loopbuy_profile_errs[] = __( 'Profile photo uploads are not connected to marketplace accounts yet. Your existing photo was kept.', 'loopbuy' );
-	}
-
-	$loopbuy_profile_fields = array(
-		'full_name' => isset( $_POST['loopbuy_full_name'] ) && is_string( $_POST['loopbuy_full_name'] ) ? sanitize_text_field( wp_unslash( $_POST['loopbuy_full_name'] ) ) : '',
-		'phone'     => isset( $_POST['loopbuy_phone'] ) && is_string( $_POST['loopbuy_phone'] ) ? sanitize_text_field( wp_unslash( $_POST['loopbuy_phone'] ) ) : '',
-		'location'  => isset( $_POST['loopbuy_location'] ) && is_string( $_POST['loopbuy_location'] ) ? sanitize_text_field( wp_unslash( $_POST['loopbuy_location'] ) ) : '',
-		'bio'       => isset( $_POST['loopbuy_bio'] ) && is_string( $_POST['loopbuy_bio'] ) ? sanitize_textarea_field( wp_unslash( $_POST['loopbuy_bio'] ) ) : '',
-	);
 	$submitted_csrf = isset( $_POST['loopbuy_marketplace_csrf'] )
 		? $_POST['loopbuy_marketplace_csrf']
 		: '';
 
-	if ( empty( $loopbuy_profile_errs ) && function_exists( 'loopbuy_marketplace_update_profile' ) ) {
-		$loopbuy_profile_update = loopbuy_marketplace_update_profile( $loopbuy_profile_fields, $submitted_csrf );
+	if ( isset( $_POST['loopbuy_avatar_submit'] ) ) {
+		if ( ! isset( $_FILES['loopbuy_avatar'] ) || ! is_array( $_FILES['loopbuy_avatar'] ) || empty( $_FILES['loopbuy_avatar']['name'] ) ) {
+			$loopbuy_profile_errs[] = __( 'Choose a profile photo to upload.', 'loopbuy' );
+		} elseif ( function_exists( 'loopbuy_marketplace_upload_avatar' ) ) {
+			$loopbuy_avatar_update = loopbuy_marketplace_upload_avatar( $_FILES['loopbuy_avatar'], $submitted_csrf );
 
-		if ( is_wp_error( $loopbuy_profile_update ) ) {
-			$loopbuy_profile_errs[] = $loopbuy_profile_update->get_error_message();
+			if ( is_wp_error( $loopbuy_avatar_update ) ) {
+				$loopbuy_profile_errs[] = $loopbuy_avatar_update->get_error_message();
+			} else {
+				$loopbuy_user        = $loopbuy_avatar_update;
+				$loopbuy_avatar_sent = true;
+			}
 		} else {
-			$loopbuy_user         = $loopbuy_profile_update;
-			$loopbuy_profile_sent = true;
+			$loopbuy_profile_errs[] = __( 'The marketplace profile photo service is unavailable.', 'loopbuy' );
 		}
-	} elseif ( empty( $loopbuy_profile_errs ) ) {
-		$loopbuy_profile_errs[] = __( 'The marketplace profile service is unavailable.', 'loopbuy' );
+	} elseif ( isset( $_POST['loopbuy_profile_submit'] ) ) {
+		$loopbuy_profile_fields = array(
+			'full_name' => isset( $_POST['loopbuy_full_name'] ) && is_string( $_POST['loopbuy_full_name'] ) ? sanitize_text_field( wp_unslash( $_POST['loopbuy_full_name'] ) ) : '',
+			'phone'     => isset( $_POST['loopbuy_phone'] ) && is_string( $_POST['loopbuy_phone'] ) ? sanitize_text_field( wp_unslash( $_POST['loopbuy_phone'] ) ) : '',
+			'location'  => isset( $_POST['loopbuy_location'] ) && is_string( $_POST['loopbuy_location'] ) ? sanitize_text_field( wp_unslash( $_POST['loopbuy_location'] ) ) : '',
+			'bio'       => isset( $_POST['loopbuy_bio'] ) && is_string( $_POST['loopbuy_bio'] ) ? sanitize_textarea_field( wp_unslash( $_POST['loopbuy_bio'] ) ) : '',
+		);
+
+		if ( function_exists( 'loopbuy_marketplace_update_profile' ) ) {
+			$loopbuy_profile_update = loopbuy_marketplace_update_profile( $loopbuy_profile_fields, $submitted_csrf );
+
+			if ( is_wp_error( $loopbuy_profile_update ) ) {
+				$loopbuy_profile_errs[] = $loopbuy_profile_update->get_error_message();
+			} else {
+				$loopbuy_user         = $loopbuy_profile_update;
+				$loopbuy_profile_sent = true;
+			}
+		} else {
+			$loopbuy_profile_errs[] = __( 'The marketplace profile service is unavailable.', 'loopbuy' );
+		}
+	} else {
+		$loopbuy_profile_errs[] = __( 'The profile action is invalid. Reload the page and try again.', 'loopbuy' );
 	}
 }
 
@@ -148,12 +165,15 @@ $loopbuy_initial        = strtoupper(
 						<?php if ( $loopbuy_profile_sent ) : ?>
 							<p class="loopbuy-profile-status" data-state="success"><?php esc_html_e( 'Your profile has been updated.', 'loopbuy' ); ?></p>
 						<?php endif; ?>
+						<?php if ( $loopbuy_avatar_sent ) : ?>
+							<p class="loopbuy-profile-status" data-state="success"><?php esc_html_e( 'Your profile photo has been updated.', 'loopbuy' ); ?></p>
+						<?php endif; ?>
 
 						<?php foreach ( $loopbuy_profile_errs as $loopbuy_profile_err ) : ?>
 							<p class="loopbuy-profile-status" data-state="error"><?php echo esc_html( $loopbuy_profile_err ); ?></p>
 						<?php endforeach; ?>
 
-						<form method="post" action="">
+						<form method="post" action="" enctype="multipart/form-data" class="loopbuy-profile-avatar-form">
 							<?php if ( is_string( $loopbuy_profile_csrf ) ) : ?>
 								<input type="hidden" name="loopbuy_marketplace_csrf" value="<?php echo esc_attr( $loopbuy_profile_csrf ); ?>">
 							<?php endif; ?>
@@ -166,11 +186,27 @@ $loopbuy_initial        = strtoupper(
 										<?php echo esc_html( $loopbuy_initial ); ?>
 									<?php endif; ?>
 								</span>
-								<span class="loopbuy-profile-photo-button" aria-disabled="true" title="<?php echo esc_attr__( 'Profile photo upload is not connected yet.', 'loopbuy' ); ?>">
+								<label class="loopbuy-profile-photo-button" for="loopbuy-avatar">
 									<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 20h16"/></svg>
-									<?php esc_html_e( 'Photo upload unavailable', 'loopbuy' ); ?>
-								</span>
+									<?php esc_html_e( 'Choose photo', 'loopbuy' ); ?>
+								</label>
+								<input class="loopbuy-profile-photo-input" type="file" id="loopbuy-avatar" name="loopbuy_avatar" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required>
+								<button
+									type="submit"
+									name="loopbuy_avatar_submit"
+									class="loopbuy-profile-photo-button"
+									<?php disabled( is_wp_error( $loopbuy_profile_csrf ) || ! is_string( $loopbuy_profile_csrf ) ); ?>
+								>
+									<?php esc_html_e( 'Upload', 'loopbuy' ); ?>
+								</button>
 							</div>
+							<p class="loopbuy-profile-photo-help"><?php esc_html_e( 'JPEG, PNG, or WebP. Maximum 2 MB, 4096 pixels per side, and 16 megapixels total.', 'loopbuy' ); ?></p>
+						</form>
+
+						<form method="post" action="">
+							<?php if ( is_string( $loopbuy_profile_csrf ) ) : ?>
+								<input type="hidden" name="loopbuy_marketplace_csrf" value="<?php echo esc_attr( $loopbuy_profile_csrf ); ?>">
+							<?php endif; ?>
 
 							<div class="loopbuy-profile-field">
 								<label for="loopbuy-full-name"><?php esc_html_e( 'Full Name', 'loopbuy' ); ?></label>
@@ -215,9 +251,11 @@ $loopbuy_initial        = strtoupper(
 					<div class="loopbuy-profile-card">
 						<div class="loopbuy-profile-card-header-row">
 							<h2 class="loopbuy-profile-card-title"><?php esc_html_e( 'My Listings', 'loopbuy' ); ?></h2>
+							<a class="loopbuy-profile-new-link" href="<?php echo esc_url( home_url( '/sell/' ) ); ?>">+ <?php esc_html_e( 'Sell', 'loopbuy' ); ?></a>
 						</div>
 
-						<p class="loopbuy-profile-empty"><?php esc_html_e( 'Listing management remains on the legacy WordPress flow and is not connected to this marketplace account yet.', 'loopbuy' ); ?></p>
+						<p class="loopbuy-profile-empty"><?php esc_html_e( 'Manage active, pending, rejected, sold, and archived listings from one place.', 'loopbuy' ); ?></p>
+						<p><a class="loopbuy-profile-save" href="<?php echo esc_url( home_url( '/my-listings/' ) ); ?>"><?php esc_html_e( 'Open My Listings', 'loopbuy' ); ?></a></p>
 					</div><!-- .loopbuy-profile-card (listings) -->
 				</div><!-- .loopbuy-profile-col-right -->
 

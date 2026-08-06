@@ -18,11 +18,11 @@ const maxMultipartMetadataBytes int64 = 64 << 10
 
 func (s *Server) serveMedia(response http.ResponseWriter, request *http.Request) {
 	listingID, imageURL, isUpload, ok := s.media.ListingReferenceForRequest(request.URL.Path)
-	if !ok {
-		http.NotFound(response, request)
-		return
-	}
-	if isUpload {
+	if ok {
+		if !isUpload {
+			s.media.ServeHTTP(response, request)
+			return
+		}
 		if s.store == nil {
 			writeProblem(response, request, http.StatusServiceUnavailable, "Service unavailable", "Media references cannot be verified.")
 			return
@@ -37,8 +37,96 @@ func (s *Server) serveMedia(response http.ResponseWriter, request *http.Request)
 			http.NotFound(response, request)
 			return
 		}
+		s.media.ServeHTTP(response, request)
+		return
+	}
+
+	userID, avatarURL, ok := s.media.AvatarReferenceForRequest(request.URL.Path)
+	if !ok {
+		http.NotFound(response, request)
+		return
+	}
+	if s.store == nil {
+		writeProblem(response, request, http.StatusServiceUnavailable, "Service unavailable", "Media references cannot be verified.")
+		return
+	}
+	exists, err := s.store.UserProfileImageURLExists(request.Context(), userID, avatarURL)
+	if err != nil {
+		s.logger.Error("verify profile avatar media reference", "user_id", userID, "error", err)
+		writeProblem(response, request, http.StatusServiceUnavailable, "Service unavailable", "Media references cannot be verified.")
+		return
+	}
+	if !exists {
+		http.NotFound(response, request)
+		return
 	}
 	s.media.ServeHTTP(response, request)
+}
+
+func (s *Server) uploadMyAvatar(response http.ResponseWriter, request *http.Request) {
+	if s.media == nil || s.store == nil {
+		writeProblem(response, request, http.StatusServiceUnavailable, "Service unavailable", "Local image storage is unavailable.")
+		return
+	}
+	userID := currentClaims(request).UserID
+	request.Body = http.MaxBytesReader(response, request.Body, s.media.MaxAvatarUploadBytes()+maxMultipartMetadataBytes)
+	reader, err := request.MultipartReader()
+	if err != nil {
+		writeProblem(response, request, http.StatusUnsupportedMediaType, "Unsupported media type", "Content-Type must be multipart/form-data with a valid boundary.")
+		return
+	}
+
+	var saved localmedia.SavedFile
+	var haveImage bool
+	removeSaved := func() {
+		if !haveImage {
+			return
+		}
+		if removeErr := s.media.DeleteUserAvatarURL(userID, saved.URL); removeErr != nil {
+			s.logger.Warn("remove uncommitted profile avatar", "user_id", userID, "error", removeErr)
+		}
+	}
+	for {
+		part, nextErr := reader.NextPart()
+		if errors.Is(nextErr, io.EOF) {
+			break
+		}
+		if nextErr != nil {
+			removeSaved()
+			writeMultipartError(response, request, nextErr)
+			return
+		}
+		if part.FormName() != "image" || haveImage || part.FileName() == "" {
+			part.Close()
+			removeSaved()
+			writeProblem(response, request, http.StatusUnprocessableEntity, "Validation failed", "Exactly one image file is required and no other fields are accepted.")
+			return
+		}
+		saved, err = s.media.SaveUserAvatar(userID, part.FileName(), part)
+		part.Close()
+		if err != nil {
+			writeAvatarMediaError(response, request, err)
+			return
+		}
+		haveImage = true
+	}
+	if !haveImage {
+		writeProblem(response, request, http.StatusUnprocessableEntity, "Validation failed", "The image field is required.")
+		return
+	}
+
+	user, previousURL, err := s.store.ReplaceUserProfileImage(request.Context(), userID, saved.URL)
+	if err != nil {
+		removeSaved()
+		writeStoreError(response, request, err)
+		return
+	}
+	if previousURL != "" && previousURL != saved.URL {
+		if removeErr := s.media.DeleteUserAvatarURL(userID, previousURL); removeErr != nil {
+			s.logger.Warn("remove replaced profile avatar", "user_id", userID, "error", removeErr)
+		}
+	}
+	writeJSON(response, http.StatusOK, user)
 }
 
 func (s *Server) uploadListingImage(response http.ResponseWriter, request *http.Request) {
@@ -215,6 +303,18 @@ func writeMediaError(response http.ResponseWriter, request *http.Request, err er
 		writeProblem(response, request, http.StatusUnprocessableEntity, "Invalid image", "Use a non-empty JPEG, PNG, WebP, or GIF whose contents match its filename extension.")
 	default:
 		writeProblem(response, request, http.StatusInternalServerError, "Image storage failed", "The image could not be stored.")
+	}
+}
+
+func writeAvatarMediaError(response http.ResponseWriter, request *http.Request, err error) {
+	var maxBytesError *http.MaxBytesError
+	switch {
+	case errors.Is(err, localmedia.ErrFileTooLarge), errors.As(err, &maxBytesError), strings.Contains(strings.ToLower(err.Error()), "request body too large"):
+		writeProblem(response, request, http.StatusRequestEntityTooLarge, "Image too large", "Profile photos must be no larger than 2 MiB.")
+	case errors.Is(err, localmedia.ErrEmptyFile), errors.Is(err, localmedia.ErrInvalidExtension), errors.Is(err, localmedia.ErrMIMETypeMismatch), errors.Is(err, localmedia.ErrInvalidDimensions):
+		writeProblem(response, request, http.StatusUnprocessableEntity, "Invalid image", "Use a non-empty JPEG, PNG, or WebP no larger than 4096 by 4096 pixels and 16 megapixels.")
+	default:
+		writeProblem(response, request, http.StatusInternalServerError, "Image storage failed", "The profile photo could not be stored.")
 	}
 }
 

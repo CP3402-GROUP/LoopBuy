@@ -99,6 +99,17 @@ loopbuy_test_assert( 1 === preg_match( '/^[a-f0-9]{64}$/D', $headers['X-LoopBuy-
 loopbuy_test_assert( false === strpos( implode( '', $headers ), $client_ip ), 'raw client address leaked into headers' );
 loopbuy_test_assert( false === strpos( implode( '', $headers ), $_SERVER['HTTP_X_FORWARDED_FOR'] ), 'forwarded address leaked into headers' );
 
+foreach ( array( 'PUT', 'DELETE' ) as $mutation_method ) {
+	$mutation_path    = '/api/v1/users/me/favourites/13';
+	$mutation_headers = loopbuy_marketplace_bff_headers( $mutation_method, $mutation_path, $timestamp );
+	$mutation_message = "loopbuy-bff-v1\n{$timestamp}\n{$client}\n{$mutation_method}\n{$mutation_path}";
+
+	loopbuy_test_assert(
+		hash_equals( hash_hmac( 'sha256', $mutation_message, $secret ), $mutation_headers['X-LoopBuy-BFF-Signature'] ),
+		$mutation_method . ' request signature mismatch'
+	);
+}
+
 $_SERVER['HTTP_X_FORWARDED_FOR'] = '192.0.2.77';
 loopbuy_test_assert(
 	$headers === loopbuy_marketplace_bff_headers( $method, $path, $timestamp ),
@@ -121,6 +132,12 @@ loopbuy_test_assert(
 	false === strpos( serialize( $api_request ), $client_ip ),
 	'loopbuy_marketplace_api_request leaked the raw client address'
 );
+
+$delete_response = loopbuy_marketplace_api_request( 'DELETE', '/api/v1/users/me/favourites/13', null, 'valid-access-token-0123456789' );
+$delete_request  = $GLOBALS['loopbuy_test_remote_request'];
+loopbuy_test_assert( 204 === $delete_response['status'], 'DELETE API request did not complete' );
+loopbuy_test_assert( 'DELETE' === $delete_request['args']['method'], 'DELETE API method was not preserved' );
+loopbuy_test_assert( isset( $delete_request['args']['headers']['X-LoopBuy-BFF-Signature'] ), 'DELETE API request was not signed' );
 
 putenv( 'BFF_SHARED_SECRET' );
 loopbuy_test_assert( array() === loopbuy_marketplace_bff_headers( $method, $path, $timestamp ), 'headers emitted without a secret' );

@@ -101,6 +101,35 @@ func (s *Server) getListing(response http.ResponseWriter, request *http.Request)
 	writeJSON(response, http.StatusOK, item)
 }
 
+func (s *Server) listMyListings(response http.ResponseWriter, request *http.Request) {
+	claims := currentClaims(request)
+	if claims.UserID < 1 {
+		writeProblem(response, request, http.StatusUnauthorized, "Unauthorized", "A bearer access token is required.")
+		return
+	}
+
+	filters := myListingsFilters(claims.UserID, request.URL.Query())
+	items, err := s.store.ListListings(request.Context(), filters)
+	if err != nil {
+		writeStoreError(response, request, err)
+		return
+	}
+
+	writeJSON(response, http.StatusOK, map[string]any{"items": items, "limit": filters.Limit, "offset": filters.Offset})
+}
+
+func myListingsFilters(userID int64, query url.Values) store.ListingFilters {
+	return store.ListingFilters{
+		SellerID:             userID,
+		Statuses:             []string{"draft", "under_review", "active", "reserved", "sold", "archived"},
+		Moderation:           []string{"approved", "pending", "rejected", "review", "unavailable"},
+		Sort:                 "newest",
+		Limit:                intQuery(query.Get("limit"), 100, 1, 100),
+		Offset:               intQuery(query.Get("offset"), 0, 0, 10_000),
+		ActiveCategoriesOnly: false,
+	}
+}
+
 func (s *Server) createListing(response http.ResponseWriter, request *http.Request) {
 	var payload listingRequest
 	if err := decodeJSON(response, request, &payload); err != nil {

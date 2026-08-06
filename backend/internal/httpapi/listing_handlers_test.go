@@ -2,11 +2,68 @@ package httpapi
 
 import (
 	"math"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"reflect"
 	"testing"
 
 	"github.com/CP3402-GROUP/LoopBuy/backend/internal/ml"
 	"github.com/CP3402-GROUP/LoopBuy/backend/internal/model"
 )
+
+func TestListMyListingsFailsClosedWithoutAuthenticatedClaims(t *testing.T) {
+	t.Parallel()
+
+	server := &Server{}
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/users/me/listings", nil)
+	response := httptest.NewRecorder()
+
+	server.listMyListings(response, request)
+
+	if response.Code != http.StatusUnauthorized {
+		t.Fatalf("listMyListings status = %d, want %d", response.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestMyListingsFiltersAreBoundToAuthenticatedSeller(t *testing.T) {
+	t.Parallel()
+
+	filters := myListingsFilters(42, url.Values{
+		"seller_id": {"7"},
+		"limit":     {"25"},
+		"offset":    {"50"},
+	})
+
+	if filters.SellerID != 42 {
+		t.Fatalf("SellerID = %d, want authenticated user 42", filters.SellerID)
+	}
+	if filters.Limit != 25 || filters.Offset != 50 {
+		t.Fatalf("pagination = (%d, %d), want (25, 50)", filters.Limit, filters.Offset)
+	}
+	if filters.ActiveCategoriesOnly {
+		t.Fatal("owner listing query unexpectedly excludes listings in inactive categories")
+	}
+	if !reflect.DeepEqual(filters.Statuses, []string{"draft", "under_review", "active", "reserved", "sold", "archived"}) {
+		t.Fatalf("Statuses = %#v", filters.Statuses)
+	}
+	if !reflect.DeepEqual(filters.Moderation, []string{"approved", "pending", "rejected", "review", "unavailable"}) {
+		t.Fatalf("Moderation = %#v", filters.Moderation)
+	}
+}
+
+func TestMyListingsFiltersUseBoundedPaginationDefaults(t *testing.T) {
+	t.Parallel()
+
+	filters := myListingsFilters(9, url.Values{
+		"limit":  {"1000"},
+		"offset": {"-1"},
+	})
+
+	if filters.Limit != 100 || filters.Offset != 0 {
+		t.Fatalf("pagination = (%d, %d), want bounded defaults (100, 0)", filters.Limit, filters.Offset)
+	}
+}
 
 func TestValidAssessmentResultRequiresConsistentThresholds(t *testing.T) {
 	t.Parallel()

@@ -48,10 +48,12 @@ class WP_REST_Response {
 class WP_REST_Request {
 	private $headers;
 	private $json;
+	private $params;
 
-	public function __construct( $headers, $json ) {
+	public function __construct( $headers, $json, $params = array() ) {
 		$this->headers = array_change_key_case( $headers, CASE_LOWER );
 		$this->json    = $json;
+		$this->params  = $params;
 	}
 
 	public function get_header( $name ) {
@@ -63,8 +65,8 @@ class WP_REST_Request {
 		return $this->json;
 	}
 
-	public function get_param() {
-		return null;
+	public function get_param( $name ) {
+		return isset( $this->params[ $name ] ) ? $this->params[ $name ] : null;
 	}
 }
 
@@ -183,6 +185,14 @@ loopbuy_assistant_test_assert(
 	isset( $GLOBALS['loopbuy_test_routes']['loopbuy/v1/assistant/chat'] ),
 	'assistant REST route was not registered'
 );
+loopbuy_assistant_test_assert(
+	isset( $GLOBALS['loopbuy_test_routes']['loopbuy/v1/favourites'] ),
+	'favourites GET REST route was not registered'
+);
+loopbuy_assistant_test_assert(
+	isset( $GLOBALS['loopbuy_test_routes']['loopbuy/v1/favourites/(?P<listing_id>[1-9][0-9]*)'] ),
+	'favourites mutation REST route was not registered'
+);
 
 $GLOBALS['loopbuy_test_backend_response'] = array(
 	'response' => array( 'code' => 200 ),
@@ -238,6 +248,28 @@ loopbuy_assistant_test_assert(
 	'private, no-store, max-age=0, must-revalidate' === $response->headers['Cache-Control'],
 	'assistant response is cacheable'
 );
+
+$GLOBALS['loopbuy_test_backend_response'] = array(
+	'response' => array( 'code' => 204 ),
+	'body'     => '',
+);
+$response = loopbuy_marketplace_favourite_mutation(
+	new WP_REST_Request( array( 'X-LoopBuy-CSRF' => $csrf ), array( 'saved' => true ), array( 'listing_id' => '13' ) )
+);
+$remote = $GLOBALS['loopbuy_test_remote_requests'][ count( $GLOBALS['loopbuy_test_remote_requests'] ) - 1 ];
+loopbuy_assistant_test_assert( 200 === $response->status, 'favourite add did not return 200' );
+loopbuy_assistant_test_assert( array( 'listing_id' => 13, 'saved' => true ) === $response->data, 'favourite add response changed' );
+loopbuy_assistant_test_assert( 'PUT' === $remote['args']['method'], 'favourite add did not use PUT internally' );
+loopbuy_assistant_test_assert( 'http://api:8080/api/v1/users/me/favourites/13' === $remote['url'], 'favourite add used the wrong backend route' );
+loopbuy_assistant_test_assert( isset( $remote['args']['headers']['X-LoopBuy-BFF-Signature'] ), 'favourite add was not signed' );
+
+$response = loopbuy_marketplace_favourite_mutation(
+	new WP_REST_Request( array( 'X-LoopBuy-CSRF' => $csrf ), array( 'saved' => false ), array( 'listing_id' => '13' ) )
+);
+$remote = $GLOBALS['loopbuy_test_remote_requests'][ count( $GLOBALS['loopbuy_test_remote_requests'] ) - 1 ];
+loopbuy_assistant_test_assert( 200 === $response->status, 'favourite remove did not return 200' );
+loopbuy_assistant_test_assert( array( 'listing_id' => 13, 'saved' => false ) === $response->data, 'favourite remove response changed' );
+loopbuy_assistant_test_assert( 'DELETE' === $remote['args']['method'], 'favourite remove did not use DELETE internally' );
 
 $request_count = count( $GLOBALS['loopbuy_test_remote_requests'] );
 $response      = loopbuy_marketplace_assistant_chat(

@@ -9,7 +9,6 @@
  */
 
 $loopbuy_sell_errors      = array();
-$loopbuy_sell_notice      = '';
 $loopbuy_request_method   = isset( $_SERVER['REQUEST_METHOD'] ) ? strtoupper( (string) $_SERVER['REQUEST_METHOD'] ) : 'GET';
 $loopbuy_marketplace_user = function_exists( 'loopbuy_marketplace_current_user' )
 	? loopbuy_marketplace_current_user()
@@ -97,12 +96,6 @@ if ( ! function_exists( 'loopbuy_sell_uploaded_images' ) ) {
 	}
 }
 
-if ( isset( $_GET['submitted'] ) && is_string( $_GET['submitted'] ) && ctype_digit( $_GET['submitted'] ) && (int) $_GET['submitted'] > 0 ) {
-	$loopbuy_sell_notice = isset( $_GET['upload'] ) && is_string( $_GET['upload'] ) && 'partial' === sanitize_key( wp_unslash( $_GET['upload'] ) )
-		? __( 'The listing was created, but one or more images could not be uploaded. The listing remains in moderation.', 'loopbuy' )
-		: __( 'Your listing and images were submitted. Scam screening and moderation determine when it becomes public.', 'loopbuy' );
-}
-
 // Process before get_header() so successful submission follows POST/Redirect/GET.
 if ( 'POST' === $loopbuy_request_method ) {
 	if ( empty( $_POST ) && ! empty( $_SERVER['CONTENT_LENGTH'] ) ) {
@@ -161,13 +154,13 @@ if ( 'POST' === $loopbuy_request_method ) {
 					}
 				}
 
-				$redirect_args = array( 'submitted' => $listing['listing_id'] );
+				$redirect_args = array( 'posted' => $listing['listing_id'] );
 
 				if ( $partial_upload ) {
 					$redirect_args['upload'] = 'partial';
 				}
 
-				wp_safe_redirect( add_query_arg( $redirect_args, home_url( '/sell/' ) ) );
+				wp_safe_redirect( add_query_arg( $redirect_args, home_url( '/my-listings/' ) ) );
 				exit;
 			}
 		}
@@ -191,10 +184,6 @@ get_header();
 			<h1 class="loopbuy-sell-title"><?php esc_html_e( 'Post a listing', 'loopbuy' ); ?></h1>
 			<p class="loopbuy-sell-subtitle"><?php esc_html_e( 'Images stay on the LoopBuy server, and scam screening runs before the listing becomes public.', 'loopbuy' ); ?></p>
 		</div>
-
-		<?php if ( $loopbuy_sell_notice ) : ?>
-			<p class="loopbuy-sell-status" data-state="success" role="status"><?php echo esc_html( $loopbuy_sell_notice ); ?></p>
-		<?php endif; ?>
 
 		<?php foreach ( array_unique( $loopbuy_sell_errors ) as $loopbuy_sell_error ) : ?>
 			<p class="loopbuy-sell-status" data-state="error" role="alert"><?php echo esc_html( $loopbuy_sell_error ); ?></p>

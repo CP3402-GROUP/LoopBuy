@@ -7,7 +7,7 @@ import (
 )
 
 func (s *Server) listFavourites(response http.ResponseWriter, request *http.Request) {
-	items, err := s.store.ListFavourites(request.Context(), currentClaims(request).UserID, intQuery(request.URL.Query().Get("limit"), 50, 1, 100))
+	items, err := s.store.ListFavourites(request.Context(), currentClaims(request).UserID, intQuery(request.URL.Query().Get("limit"), 100, 1, 100))
 	if err != nil {
 		writeStoreError(response, request, err)
 		return

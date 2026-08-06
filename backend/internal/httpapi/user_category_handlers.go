@@ -43,16 +43,15 @@ func (s *Server) updateMe(response http.ResponseWriter, request *http.Request) {
 	input := store.UpdateUserInput{
 		Username: current.Username, Email: current.Email,
 		FullName: current.Profile.FullName, Phone: current.Profile.Phone, Location: current.Profile.Location,
-		Bio: current.Profile.Bio, ProfileImage: current.Profile.ProfileImage,
+		Bio: current.Profile.Bio,
 	}
 	var patch struct {
-		Username     *string `json:"username"`
-		Email        *string `json:"email"`
-		FullName     *string `json:"full_name"`
-		Phone        *string `json:"phone"`
-		Location     *string `json:"location"`
-		Bio          *string `json:"bio"`
-		ProfileImage *string `json:"profile_image"`
+		Username *string `json:"username"`
+		Email    *string `json:"email"`
+		FullName *string `json:"full_name"`
+		Phone    *string `json:"phone"`
+		Location *string `json:"location"`
+		Bio      *string `json:"bio"`
 	}
 	if err := decodeJSON(response, request, &patch); err != nil {
 		writeProblem(response, request, http.StatusBadRequest, "Invalid request", err.Error())
@@ -72,7 +71,7 @@ func (s *Server) updateMe(response http.ResponseWriter, request *http.Request) {
 	if !assign(&input.Username, patch.Username, 50) || !assign(&input.Email, patch.Email, 254) ||
 		!assign(&input.FullName, patch.FullName, 100) || !assign(&input.Phone, patch.Phone, 32) ||
 		!assign(&input.Location, patch.Location, 120) || !assign(&input.Bio, patch.Bio, 2000) ||
-		!assign(&input.ProfileImage, patch.ProfileImage, 1024) || !usernamePattern.MatchString(input.Username) || !validEmail(input.Email) {
+		!usernamePattern.MatchString(input.Username) || !validEmail(input.Email) {
 		writeProblem(response, request, http.StatusUnprocessableEntity, "Validation failed", "One or more profile fields are invalid.")
 		return
 	}
@@ -90,21 +89,31 @@ func (s *Server) updateMe(response http.ResponseWriter, request *http.Request) {
 
 func (s *Server) deleteMe(response http.ResponseWriter, request *http.Request) {
 	userID := currentClaims(request).UserID
+	var mediaCleanupErr error
 	err := s.store.DeleteUser(request.Context(), userID, func(listingIDs []int64) error {
 		if s.media == nil {
-			return errors.New("local media storage is unavailable")
+			mediaCleanupErr = errors.New("local media storage is unavailable")
+			return nil
 		}
 		for _, listingID := range listingIDs {
-			if err := s.media.DeleteListingMedia(listingID); err != nil {
-				return err
+			if cleanupErr := s.media.DeleteListingMedia(listingID); cleanupErr != nil {
+				if mediaCleanupErr == nil {
+					mediaCleanupErr = cleanupErr
+				}
 			}
+		}
+		if cleanupErr := s.media.DeleteUserAvatarMedia(userID); cleanupErr != nil && mediaCleanupErr == nil {
+			mediaCleanupErr = cleanupErr
 		}
 		return nil
 	})
 	if err != nil {
-		s.logger.Error("delete account and listing media", "user_id", userID, "error", err)
+		s.logger.Error("delete account", "user_id", userID, "error", err)
 		writeStoreError(response, request, err)
 		return
+	}
+	if mediaCleanupErr != nil {
+		s.logger.Warn("delete inaccessible account media", "user_id", userID, "error", mediaCleanupErr)
 	}
 	writeJSON(response, http.StatusNoContent, nil)
 }

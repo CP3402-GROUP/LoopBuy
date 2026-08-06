@@ -137,13 +137,12 @@ func getUser(ctx context.Context, querier queryRower, userID int64, includePriva
 }
 
 type UpdateUserInput struct {
-	Username     string
-	Email        string
-	FullName     string
-	Phone        string
-	Location     string
-	Bio          string
-	ProfileImage string
+	Username string
+	Email    string
+	FullName string
+	Phone    string
+	Location string
+	Bio      string
 }
 
 func (s *Store) UpdateUser(ctx context.Context, userID int64, input UpdateUserInput) (model.User, error) {
@@ -168,8 +167,8 @@ func (s *Store) UpdateUser(ctx context.Context, userID int64, input UpdateUserIn
 	}
 	_, err = tx.ExecContext(ctx, `
 		UPDATE user_profiles
-		SET full_name = ?, phone = ?, location = ?, bio = ?, profile_image = ?, updated_at = CURRENT_TIMESTAMP(6)
-		WHERE user_id = ?`, input.FullName, input.Phone, input.Location, input.Bio, input.ProfileImage, userID)
+		SET full_name = ?, phone = ?, location = ?, bio = ?, updated_at = CURRENT_TIMESTAMP(6)
+		WHERE user_id = ?`, input.FullName, input.Phone, input.Location, input.Bio, userID)
 	if err != nil {
 		return model.User{}, err
 	}
@@ -183,7 +182,77 @@ func (s *Store) UpdateUser(ctx context.Context, userID int64, input UpdateUserIn
 	return user, nil
 }
 
-func (s *Store) DeleteUser(ctx context.Context, userID int64, cleanupListingMedia func([]int64) error) error {
+// ReplaceUserProfileImage atomically swaps the current generated avatar URL
+// and returns both the updated user and the previously referenced URL. Callers
+// can safely delete the old object after commit; exact-reference media serving
+// makes it unreachable as soon as this transaction succeeds.
+func (s *Store) ReplaceUserProfileImage(ctx context.Context, userID int64, imageURL string) (model.User, string, error) {
+	imageURL = strings.TrimSpace(imageURL)
+	if userID <= 0 || imageURL == "" || len(imageURL) > 1024 {
+		return model.User{}, "", errors.New("store: invalid profile image replacement")
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return model.User{}, "", err
+	}
+	defer tx.Rollback()
+
+	var previousURL string
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COALESCE(p.profile_image, '')
+		FROM user_profiles AS p
+		JOIN users AS u ON u.user_id = p.user_id
+		WHERE p.user_id = ? AND u.status <> 'deleted'
+		FOR UPDATE`, userID).Scan(&previousURL); err != nil {
+		return model.User{}, "", normalizeSQLError(err)
+	}
+	result, err := tx.ExecContext(ctx, `
+		UPDATE user_profiles
+		SET profile_image = ?, updated_at = CURRENT_TIMESTAMP(6)
+		WHERE user_id = ?`, imageURL, userID)
+	if err != nil {
+		return model.User{}, "", err
+	}
+	if affected, _ := result.RowsAffected(); affected != 1 {
+		return model.User{}, "", ErrNotFound
+	}
+	user, err := getUser(ctx, tx, userID, true)
+	if err != nil {
+		return model.User{}, "", err
+	}
+	if err := tx.Commit(); err != nil {
+		return model.User{}, "", err
+	}
+	return user, previousURL, nil
+}
+
+// UserProfileImageURLExists is the revocation check for public avatar reads.
+// BINARY forces a byte-exact URL comparison despite the table's default
+// case-insensitive collation.
+func (s *Store) UserProfileImageURLExists(ctx context.Context, userID int64, imageURL string) (bool, error) {
+	if userID <= 0 || strings.TrimSpace(imageURL) == "" {
+		return false, nil
+	}
+	var exists bool
+	err := s.db.QueryRowContext(ctx, `
+		SELECT EXISTS(
+			SELECT 1
+			FROM user_profiles AS p
+			JOIN users AS u ON u.user_id = p.user_id
+			WHERE p.user_id = ? AND BINARY p.profile_image = BINARY ? AND u.status <> 'deleted'
+		)`, userID, imageURL).Scan(&exists)
+	return exists, err
+}
+
+// DeleteUser commits the account tombstone and removes every database media
+// reference before invoking cleanupAccountMedia. A cleanup failure may leave
+// inaccessible orphan files, but can no longer roll the database back to live
+// rows that reference files which were already deleted.
+func (s *Store) DeleteUser(ctx context.Context, userID int64, cleanupAccountMedia func([]int64) error) error {
+	if cleanupAccountMedia == nil {
+		return errors.New("account media cleanup is unavailable")
+	}
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -215,14 +284,6 @@ func (s *Store) DeleteUser(ctx context.Context, userID int64, cleanupListingMedi
 	}
 	if err := rows.Close(); err != nil {
 		return err
-	}
-	if len(listingIDs) > 0 {
-		if cleanupListingMedia == nil {
-			return errors.New("listing media cleanup is unavailable")
-		}
-		if err := cleanupListingMedia(listingIDs); err != nil {
-			return fmt.Errorf("delete listing media before account commit: %w", err)
-		}
 	}
 	if _, err := tx.ExecContext(ctx, `
 		DELETE image FROM listing_images AS image
@@ -265,7 +326,13 @@ func (s *Store) DeleteUser(ctx context.Context, userID int64, cleanupListingMedi
 			return err
 		}
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	if err := cleanupAccountMedia(listingIDs); err != nil {
+		return fmt.Errorf("delete account media after account commit: %w", err)
+	}
+	return nil
 }
 
 func (s *Store) GetActiveUserRole(ctx context.Context, userID int64) (string, error) {

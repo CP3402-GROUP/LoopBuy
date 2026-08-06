@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/base64"
 	"errors"
+	"image"
+	"image/png"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -59,6 +61,89 @@ func TestSaveServeAndDeleteListingImage(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(storage.Root(), filepath.FromSlash(saved.Key))); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected object deletion, got %v", err)
+	}
+}
+
+func TestSaveServeAndDeleteUserAvatar(t *testing.T) {
+	t.Parallel()
+	storage, err := New(Config{Root: t.TempDir(), PublicBaseURL: "/media", MaxUploadBytes: 1024})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	saved, err := storage.SaveUserAvatar(42, `C:\fakepath\avatar.PNG`, bytes.NewReader(onePixelPNG))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(saved.URL, "/media/avatars/42/") || !strings.HasSuffix(saved.URL, ".png") {
+		t.Fatalf("unexpected public avatar URL %q", saved.URL)
+	}
+	if userID, imageURL, ok := storage.AvatarReferenceForRequest(saved.URL); !ok || userID != 42 || imageURL != saved.URL {
+		t.Fatalf("unexpected avatar reference: user_id=%d url=%q ok=%t", userID, imageURL, ok)
+	}
+	if _, _, _, ok := storage.ListingReferenceForRequest(saved.URL); ok {
+		t.Fatalf("avatar was classified as a listing image: %q", saved.URL)
+	}
+
+	request := httptest.NewRequest(http.MethodGet, saved.URL, nil)
+	response := httptest.NewRecorder()
+	storage.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("GET returned %d: %s", response.Code, response.Body.String())
+	}
+	if got := response.Header().Get("Cache-Control"); got != "private, no-store" {
+		t.Fatalf("unexpected Cache-Control %q", got)
+	}
+	if !bytes.Equal(response.Body.Bytes(), onePixelPNG) {
+		t.Fatal("served avatar bytes differ from uploaded bytes")
+	}
+
+	if err := storage.DeleteUserAvatarURL(43, saved.URL); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(storage.Root(), filepath.FromSlash(saved.Key))); err != nil {
+		t.Fatalf("mismatched user ID removed another user's avatar: %v", err)
+	}
+	if err := storage.DeleteUserAvatarURL(42, saved.URL); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(storage.Root(), filepath.FromSlash(saved.Key))); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected avatar deletion, got %v", err)
+	}
+}
+
+func TestDeleteUserAvatarMediaPreservesOtherUsers(t *testing.T) {
+	t.Parallel()
+	storage, err := New(Config{Root: t.TempDir(), PublicBaseURL: "/media"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := storage.SaveUserAvatar(42, "first.png", bytes.NewReader(onePixelPNG))
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := storage.SaveUserAvatar(42, "second.png", bytes.NewReader(onePixelPNG))
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, err := storage.SaveUserAvatar(43, "other.png", bytes.NewReader(onePixelPNG))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := storage.DeleteUserAvatarMedia(42); err != nil {
+		t.Fatal(err)
+	}
+	for _, saved := range []SavedFile{first, second} {
+		if _, err := os.Stat(filepath.Join(storage.Root(), filepath.FromSlash(saved.Key))); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("user 42 avatar still exists: %v", err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(storage.Root(), filepath.FromSlash(other.Key))); err != nil {
+		t.Fatalf("user 43 avatar was removed: %v", err)
+	}
+	if err := storage.DeleteUserAvatarMedia(0); err == nil {
+		t.Fatal("DeleteUserAvatarMedia(0) unexpectedly succeeded")
 	}
 }
 
@@ -150,6 +235,95 @@ func TestSaveListingImageValidatesSizeExtensionAndMagicBytes(t *testing.T) {
 	}
 }
 
+func TestAvatarReferenceForRequestAcceptsOnlyStrictGeneratedKeys(t *testing.T) {
+	t.Parallel()
+	storage, err := New(Config{Root: t.TempDir(), PublicBaseURL: "https://assets.example/app/media"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	key := "avatars/42/0123456789abcdef0123456789abcdef.webp"
+	userID, imageURL, ok := storage.AvatarReferenceForRequest("/app/media/" + key)
+	if !ok || userID != 42 || imageURL != "https://assets.example/app/media/"+key {
+		t.Fatalf("unexpected avatar reference: id=%d url=%q ok=%t", userID, imageURL, ok)
+	}
+	for _, requestPath := range []string{
+		"/media/" + key,
+		"/app/media/avatars/43/not-random.png",
+		"/app/media/avatars/42/../../secret.png",
+		"/app/media/avatars/0/0123456789abcdef0123456789abcdef.png",
+		"/app/media/avatars/42/0123456789abcdef0123456789abcdef.gif",
+	} {
+		if _, _, ok := storage.AvatarReferenceForRequest(requestPath); ok {
+			t.Fatalf("unsafe avatar request path accepted: %q", requestPath)
+		}
+	}
+}
+
+func TestSaveUserAvatarValidatesTypeSizeAndDimensions(t *testing.T) {
+	t.Parallel()
+	storage, err := New(Config{Root: t.TempDir(), PublicBaseURL: "/media"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := storage.SaveUserAvatar(1, "avatar.gif", bytes.NewReader(onePixelPNG)); !errors.Is(err, ErrInvalidExtension) {
+		t.Fatalf("GIF avatar error = %v, want ErrInvalidExtension", err)
+	}
+	if _, err := storage.SaveUserAvatar(1, "avatar.jpg", bytes.NewReader(onePixelPNG)); !errors.Is(err, ErrMIMETypeMismatch) {
+		t.Fatalf("mismatched avatar error = %v, want ErrMIMETypeMismatch", err)
+	}
+	if saved, err := storage.SaveUserAvatar(2, "avatar.webp", bytes.NewReader(minimalWEBP())); err != nil {
+		t.Fatalf("valid WebP avatar error = %v", err)
+	} else if !strings.HasSuffix(saved.URL, ".webp") {
+		t.Fatalf("valid WebP avatar URL = %q", saved.URL)
+	}
+	animatedWEBP := append([]byte(nil), minimalWEBP()...)
+	animatedWEBP[20] = 0x02
+	if _, err := storage.SaveUserAvatar(2, "animated.webp", bytes.NewReader(animatedWEBP)); !errors.Is(err, ErrInvalidDimensions) {
+		t.Fatalf("animated WebP avatar error = %v, want ErrInvalidDimensions", err)
+	}
+	oversized := append(append([]byte(nil), onePixelPNG...), make([]byte, maxAvatarUploadBytes)...)
+	if _, err := storage.SaveUserAvatar(1, "avatar.png", bytes.NewReader(oversized)); !errors.Is(err, ErrFileTooLarge) {
+		t.Fatalf("oversized avatar error = %v, want ErrFileTooLarge", err)
+	}
+
+	var tooWide bytes.Buffer
+	if err := png.Encode(&tooWide, image.NewNRGBA(image.Rect(0, 0, maxAvatarDimension+1, 1))); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := storage.SaveUserAvatar(1, "avatar.png", bytes.NewReader(tooWide.Bytes())); !errors.Is(err, ErrInvalidDimensions) {
+		t.Fatalf("oversized dimensions error = %v, want ErrInvalidDimensions", err)
+	}
+	entries, err := os.ReadDir(filepath.Join(storage.Root(), "avatars", "1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("rejected avatar left %d files behind", len(entries))
+	}
+}
+
+func TestValidAvatarDimensionsEnforcesEachAxisAndPixelArea(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		width  int
+		height int
+		want   bool
+	}{
+		{width: 1, height: 1, want: true},
+		{width: 4000, height: 4000, want: true},
+		{width: 4096, height: 4096, want: false},
+		{width: 4097, height: 1, want: false},
+		{width: 1, height: 4097, want: false},
+		{width: 0, height: 1, want: false},
+	}
+	for _, test := range tests {
+		if got := validAvatarDimensions(test.width, test.height); got != test.want {
+			t.Fatalf("validAvatarDimensions(%d, %d) = %t, want %t", test.width, test.height, got, test.want)
+		}
+	}
+}
+
 func TestServeRejectsTraversalAndNonReadMethods(t *testing.T) {
 	t.Parallel()
 	storage, err := New(Config{Root: t.TempDir(), PublicBaseURL: "/media"})
@@ -221,5 +395,11 @@ func minimalJPEG() []byte {
 }
 
 func minimalWEBP() []byte {
-	return []byte{'R', 'I', 'F', 'F', 4, 0, 0, 0, 'W', 'E', 'B', 'P', 'V', 'P', '8', ' '}
+	return []byte{
+		'R', 'I', 'F', 'F', 40, 0, 0, 0, 'W', 'E', 'B', 'P',
+		'V', 'P', '8', 'X', 10, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		'V', 'P', '8', ' ', 10, 0, 0, 0,
+		0, 0, 0, 0x9d, 0x01, 0x2a, 1, 0, 1, 0,
+	}
 }

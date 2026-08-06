@@ -12,7 +12,9 @@
  * @package LoopBuy
  */
 
-get_header();
+$loopbuy_detail_user = function_exists( 'loopbuy_marketplace_current_user' )
+	? loopbuy_marketplace_current_user()
+	: null;
 
 /* Get a positive numeric product ID from the URL. */
 $product_id_raw = isset( $_GET['id'] )
@@ -36,9 +38,18 @@ if ( false === $product_id ) {
 $product = null;
 
 if ( $product_id > 0 ) {
-    $loopbuy_backend_product = function_exists( 'loopbuy_backend_get_public_product' )
-        ? loopbuy_backend_get_public_product( $product_id )
-        : new WP_Error( 'loopbuy_backend_bridge_unavailable', 'The backend detail bridge is unavailable.' );
+	$loopbuy_backend_product = null;
+
+	if ( is_array( $loopbuy_detail_user )
+		&& function_exists( 'loopbuy_marketplace_get_listing' ) ) {
+		$loopbuy_backend_product = loopbuy_marketplace_get_listing( $product_id );
+	}
+
+	if ( null === $loopbuy_backend_product ) {
+		$loopbuy_backend_product = function_exists( 'loopbuy_backend_get_public_product' )
+			? loopbuy_backend_get_public_product( $product_id )
+			: new WP_Error( 'loopbuy_backend_bridge_unavailable', 'The backend detail bridge is unavailable.' );
+	}
 
     if ( is_wp_error( $loopbuy_backend_product ) ) {
         // A genuine backend/contract failure may use the bundled legacy data.
@@ -61,6 +72,7 @@ if ( $product_id > 0 ) {
     unset( $loopbuy_backend_product );
 }
 
+get_header();
 
 /* Product not found */
 if (!$product) {
@@ -242,6 +254,8 @@ $product_image_url = function_exists( 'loopbuy_product_image_url' )
                         class="detail-favourite-button"
                         type="button"
                         data-product-id="<?php echo esc_attr($product['id']); ?>"
+                        aria-label="<?php esc_attr_e( 'Save product', 'loopbuy' ); ?>"
+                        aria-pressed="false"
                     >
                         ♡ Save
                     </button>
