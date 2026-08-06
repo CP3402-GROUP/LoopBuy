@@ -49,9 +49,10 @@ type Config struct {
 	QwenMaxRequestsHour    int
 	QwenMaxRequestsUserDay int
 
-	MLServiceURL   string
-	AIChatFallback bool
-	WorkerInterval time.Duration
+	MLServiceURL          string
+	ScamModerationEnabled bool
+	AIChatFallback        bool
+	WorkerInterval        time.Duration
 }
 
 func Load() (Config, error) {
@@ -142,9 +143,10 @@ func Load() (Config, error) {
 		QwenMaxRequestsHour:    qwenMaxRequestsHour,
 		QwenMaxRequestsUserDay: qwenMaxRequestsUserDay,
 
-		MLServiceURL:   strings.TrimRight(env("ML_SERVICE_URL", "http://ml:8000"), "/"),
-		AIChatFallback: envBool("AI_CHAT_FALLBACK_ENABLED", true),
-		WorkerInterval: workerInterval,
+		MLServiceURL:          strings.TrimRight(env("ML_SERVICE_URL", "http://ml:8000"), "/"),
+		ScamModerationEnabled: envBool("SCAM_MODERATION_ENABLED", true),
+		AIChatFallback:        envBool("AI_CHAT_FALLBACK_ENABLED", true),
+		WorkerInterval:        workerInterval,
 	}
 
 	if len(cfg.JWTSecret) < 32 {

@@ -29,6 +29,69 @@ $loopbuy_v                = array(
 	'location'    => '',
 	'description' => '',
 );
+$loopbuy_edit_id          = 0;
+$loopbuy_editing_listing  = null;
+$loopbuy_existing_images  = array();
+$loopbuy_edit_revision    = 0;
+
+if ( isset( $_GET['edit'] ) && is_string( $_GET['edit'] ) && ctype_digit( wp_unslash( $_GET['edit'] ) ) ) {
+	$loopbuy_edit_id = (int) $_GET['edit'];
+}
+
+if ( 'POST' === $loopbuy_request_method
+	&& isset( $_POST['loopbuy_listing_id'] )
+	&& is_string( $_POST['loopbuy_listing_id'] )
+	&& ctype_digit( wp_unslash( $_POST['loopbuy_listing_id'] ) ) ) {
+	$loopbuy_edit_id = (int) $_POST['loopbuy_listing_id'];
+}
+
+if ( $loopbuy_edit_id > 0 && is_array( $loopbuy_marketplace_user ) ) {
+	$loopbuy_editing_listing = function_exists( 'loopbuy_marketplace_get_listing' )
+		? loopbuy_marketplace_get_listing( $loopbuy_edit_id )
+		: new WP_Error( 'loopbuy_marketplace_bridge_unavailable', __( 'The listing editor is unavailable.', 'loopbuy' ) );
+
+	if ( is_wp_error( $loopbuy_editing_listing ) ) {
+		$loopbuy_sell_errors[] = $loopbuy_editing_listing->get_error_message();
+	} elseif ( ! is_array( $loopbuy_editing_listing )
+		|| (int) $loopbuy_marketplace_user['user_id'] !== (int) $loopbuy_editing_listing['seller_id'] ) {
+		$loopbuy_editing_listing = null;
+		$loopbuy_sell_errors[]   = __( 'That listing was not found in your account.', 'loopbuy' );
+	} elseif ( isset( $loopbuy_editing_listing['moderation_status'] ) && 'rejected' === sanitize_key( $loopbuy_editing_listing['moderation_status'] ) ) {
+		$loopbuy_editing_listing = null;
+		$loopbuy_sell_errors[]   = __( 'A rejected listing cannot be edited or republished without moderator approval.', 'loopbuy' );
+	} else {
+		$loopbuy_edit_revision   = isset( $loopbuy_editing_listing['revision'] ) && is_numeric( $loopbuy_editing_listing['revision'] )
+			? (int) $loopbuy_editing_listing['revision']
+			: 0;
+		$loopbuy_existing_images = isset( $loopbuy_editing_listing['images'] ) && is_array( $loopbuy_editing_listing['images'] )
+			? $loopbuy_editing_listing['images']
+			: array();
+
+		if ( 'POST' === $loopbuy_request_method ) {
+			$loopbuy_edit_revision = isset( $_POST['loopbuy_listing_revision'] )
+				&& is_string( $_POST['loopbuy_listing_revision'] )
+				&& ctype_digit( wp_unslash( $_POST['loopbuy_listing_revision'] ) )
+					? (int) $_POST['loopbuy_listing_revision']
+					: 0;
+		}
+
+		if ( $loopbuy_edit_revision < 1 ) {
+			$loopbuy_sell_errors[] = __( 'This listing cannot be edited until its latest revision is loaded. Reload the page and try again.', 'loopbuy' );
+		}
+
+		if ( 'POST' !== $loopbuy_request_method ) {
+			$loopbuy_v['title']       = isset( $loopbuy_editing_listing['name'] ) ? sanitize_text_field( $loopbuy_editing_listing['name'] ) : '';
+			$loopbuy_v['price']       = isset( $loopbuy_editing_listing['price'] ) && is_numeric( $loopbuy_editing_listing['price'] ) ? (string) $loopbuy_editing_listing['price'] : '';
+			$loopbuy_v['brand']       = isset( $loopbuy_editing_listing['brand'] ) ? sanitize_text_field( $loopbuy_editing_listing['brand'] ) : '';
+			$loopbuy_v['category_id'] = isset( $loopbuy_editing_listing['category_id'] ) ? (string) absint( $loopbuy_editing_listing['category_id'] ) : '';
+			$loopbuy_v['condition']   = isset( $loopbuy_editing_listing['condition'] )
+				? sanitize_key( str_replace( array( '_', ' ' ), '-', strtolower( (string) $loopbuy_editing_listing['condition'] ) ) )
+				: 'good';
+			$loopbuy_v['location']    = isset( $loopbuy_editing_listing['location'] ) ? sanitize_text_field( $loopbuy_editing_listing['location'] ) : '';
+			$loopbuy_v['description'] = isset( $loopbuy_editing_listing['description'] ) ? sanitize_textarea_field( $loopbuy_editing_listing['description'] ) : '';
+		}
+	}
+}
 
 /**
  * Normalize and pre-validate a bounded multi-file PHP upload.
@@ -125,28 +188,51 @@ if ( 'POST' === $loopbuy_request_method ) {
 			$loopbuy_sell_errors[] = $loopbuy_uploads->get_error_message();
 		}
 
+		if ( is_array( $loopbuy_uploads ) && count( $loopbuy_existing_images ) + count( $loopbuy_uploads ) > 10 ) {
+			$loopbuy_sell_errors[] = __( 'A listing can have no more than 10 photos in total. Remove an existing photo or choose fewer new ones.', 'loopbuy' );
+		}
+
+		if ( $loopbuy_edit_id > 0 && ( ! is_array( $loopbuy_editing_listing ) || $loopbuy_edit_revision < 1 ) ) {
+			$loopbuy_sell_errors[] = __( 'The listing editor could not verify the current listing revision.', 'loopbuy' );
+		}
+
 		if ( empty( $loopbuy_sell_errors ) ) {
 			$submitted_csrf = isset( $_POST['loopbuy_marketplace_csrf'] ) ? $_POST['loopbuy_marketplace_csrf'] : '';
-			$listing = loopbuy_marketplace_create_listing(
-				array(
-					'category_id'    => $loopbuy_v['category_id'],
-					'title'          => $loopbuy_v['title'],
-					'description'    => $loopbuy_v['description'],
-					'brand'          => $loopbuy_v['brand'],
-					'location'       => $loopbuy_v['location'],
-					'price'          => $loopbuy_v['price'],
-					'item_condition' => $loopbuy_v['condition'],
-				),
-				$submitted_csrf
+			$listing_fields = array(
+				'category_id'    => $loopbuy_v['category_id'],
+				'title'          => $loopbuy_v['title'],
+				'description'    => $loopbuy_v['description'],
+				'brand'          => $loopbuy_v['brand'],
+				'location'       => $loopbuy_v['location'],
+				'price'          => $loopbuy_v['price'],
+				'item_condition' => $loopbuy_v['condition'],
 			);
+			$listing        = $loopbuy_edit_id > 0 && function_exists( 'loopbuy_marketplace_update_listing' )
+				? loopbuy_marketplace_update_listing( $loopbuy_edit_id, $loopbuy_edit_revision, $listing_fields, $submitted_csrf )
+				: loopbuy_marketplace_create_listing( $listing_fields, $submitted_csrf );
 
 			if ( is_wp_error( $listing ) ) {
 				$loopbuy_sell_errors[] = $listing->get_error_message();
 			} else {
-				$partial_upload = false;
+				$partial_upload  = false;
+				$listing_id      = $loopbuy_edit_id > 0
+					? $loopbuy_edit_id
+					: ( isset( $listing['listing_id'] ) ? (int) $listing['listing_id'] : 0 );
+				$next_sort_order = 0;
+
+				foreach ( $loopbuy_existing_images as $existing_image ) {
+					if ( is_array( $existing_image ) && isset( $existing_image['sort_order'] ) && is_numeric( $existing_image['sort_order'] ) ) {
+						$next_sort_order = max( $next_sort_order, (int) $existing_image['sort_order'] + 1 );
+					}
+				}
 
 				foreach ( $loopbuy_uploads as $index => $upload ) {
-					$uploaded = loopbuy_marketplace_upload_listing_image( $listing['listing_id'], $upload, $index, 0 === $index );
+					$uploaded = loopbuy_marketplace_upload_listing_image(
+						$listing_id,
+						$upload,
+						$next_sort_order + $index,
+						empty( $loopbuy_existing_images ) && 0 === $index
+					);
 
 					if ( is_wp_error( $uploaded ) ) {
 						$partial_upload = true;
@@ -154,7 +240,7 @@ if ( 'POST' === $loopbuy_request_method ) {
 					}
 				}
 
-				$redirect_args = array( 'posted' => $listing['listing_id'] );
+				$redirect_args = array( ( $loopbuy_edit_id > 0 ? 'updated' : 'posted' ) => $listing_id );
 
 				if ( $partial_upload ) {
 					$redirect_args['upload'] = 'partial';
@@ -175,14 +261,40 @@ if ( is_wp_error( $loopbuy_sell_csrf ) ) {
 	$loopbuy_sell_errors[] = $loopbuy_sell_csrf->get_error_message();
 }
 
+$loopbuy_edit_mode             = $loopbuy_edit_id > 0 && is_array( $loopbuy_editing_listing ) && $loopbuy_edit_revision > 0;
+$loopbuy_remaining_image_slots = max( 0, 10 - count( $loopbuy_existing_images ) );
+$loopbuy_sell_form_action      = $loopbuy_edit_mode
+	? add_query_arg( 'edit', $loopbuy_edit_id, home_url( '/sell/' ) )
+	: home_url( '/sell/' );
+
+$loopbuy_sell_images_script = get_template_directory() . '/js/sell-images.js';
+
+if ( is_file( $loopbuy_sell_images_script ) ) {
+	wp_enqueue_script(
+		'loopbuy-sell-images',
+		get_template_directory_uri() . '/js/sell-images.js',
+		array(),
+		(string) filemtime( $loopbuy_sell_images_script ),
+		true
+	);
+}
+
 get_header();
 ?>
 
 <main id="primary" class="site-main">
 	<div class="page loopbuy-sell">
 		<div class="loopbuy-sell-header">
-			<h1 class="loopbuy-sell-title"><?php esc_html_e( 'Post a listing', 'loopbuy' ); ?></h1>
-			<p class="loopbuy-sell-subtitle"><?php esc_html_e( 'Images stay on the LoopBuy server, and scam screening runs before the listing becomes public.', 'loopbuy' ); ?></p>
+			<h1 class="loopbuy-sell-title"><?php echo esc_html( $loopbuy_edit_mode ? __( 'Edit listing', 'loopbuy' ) : __( 'Post a listing', 'loopbuy' ) ); ?></h1>
+			<p class="loopbuy-sell-subtitle">
+				<?php
+				echo esc_html(
+					$loopbuy_edit_mode
+						? __( 'Update the details or add photos. Existing photos stay attached, and any new ones are appended.', 'loopbuy' )
+						: __( 'Images stay on the LoopBuy server. After saving, you can see the publication status in My Listings.', 'loopbuy' )
+				);
+				?>
+			</p>
 		</div>
 
 		<?php foreach ( array_unique( $loopbuy_sell_errors ) as $loopbuy_sell_error ) : ?>
@@ -194,28 +306,94 @@ get_header();
 				<p><?php echo esc_html( is_wp_error( $loopbuy_marketplace_user ) ? $loopbuy_marketplace_user->get_error_message() : __( 'You need to be logged in to post a listing.', 'loopbuy' ) ); ?></p>
 				<a href="<?php echo esc_url( home_url( '/login/' ) ); ?>" class="auth-button"><?php esc_html_e( 'Log in', 'loopbuy' ); ?></a>
 			</div>
+		<?php elseif ( $loopbuy_edit_id > 0 && ! $loopbuy_edit_mode ) : ?>
+			<div class="loopbuy-profile-login-notice">
+				<p><?php esc_html_e( 'This listing cannot be opened in the editor.', 'loopbuy' ); ?></p>
+				<a href="<?php echo esc_url( home_url( '/my-listings/' ) ); ?>" class="auth-button"><?php esc_html_e( 'Back to My Listings', 'loopbuy' ); ?></a>
+			</div>
 		<?php else : ?>
-			<form class="loopbuy-sell-form" method="post" action="<?php echo esc_url( home_url( '/sell/' ) ); ?>" enctype="multipart/form-data">
+			<form class="loopbuy-sell-form" method="post" action="<?php echo esc_url( $loopbuy_sell_form_action ); ?>" enctype="multipart/form-data">
 				<input type="hidden" name="loopbuy_sell_submit" value="1">
+				<?php if ( $loopbuy_edit_mode ) : ?>
+					<input type="hidden" name="loopbuy_listing_id" value="<?php echo esc_attr( $loopbuy_edit_id ); ?>">
+					<input type="hidden" name="loopbuy_listing_revision" value="<?php echo esc_attr( $loopbuy_edit_revision ); ?>">
+				<?php endif; ?>
 				<?php if ( is_string( $loopbuy_sell_csrf ) ) : ?>
 					<input type="hidden" name="loopbuy_marketplace_csrf" value="<?php echo esc_attr( $loopbuy_sell_csrf ); ?>">
 				<?php endif; ?>
 
-				<div class="loopbuy-sell-field">
-					<label for="loopbuy-sell-photos"><?php esc_html_e( 'Photos', 'loopbuy' ); ?></label>
-					<label for="loopbuy-sell-photos" class="loopbuy-photo-upload" id="loopbuy-photo-dropzone">
-						<svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 15.5V4M12 4L7.5 8.5M12 4L16.5 8.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15.5V17.5C4 18.6046 4.89543 19.5 6 19.5H18C19.1046 19.5 20 18.6046 20 17.5V15.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-						<span>
-							<?php
-							printf(
-								/* translators: %d is the current per-file server limit in megabytes. */
-								esc_html__( 'Choose up to 10 JPEG, PNG, WebP, or GIF images (up to %d MB each)', 'loopbuy' ),
-								(int) $loopbuy_image_limit_mb
-							);
-							?>
-						</span>
-						<input type="file" id="loopbuy-sell-photos" name="loopbuy_photos[]" accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif" multiple hidden>
-					</label>
+				<div class="loopbuy-sell-field loopbuy-photo-field">
+					<label for="loopbuy-sell-photos"><?php echo esc_html( $loopbuy_edit_mode ? __( 'Add photos', 'loopbuy' ) : __( 'Photos', 'loopbuy' ) ); ?></label>
+
+					<?php if ( $loopbuy_edit_mode && ! empty( $loopbuy_existing_images ) ) : ?>
+						<div class="loopbuy-existing-photos" aria-label="<?php esc_attr_e( 'Existing listing photos', 'loopbuy' ); ?>">
+							<div class="loopbuy-existing-photos-heading">
+								<strong><?php echo esc_html( sprintf( _n( '%d existing photo', '%d existing photos', count( $loopbuy_existing_images ), 'loopbuy' ), count( $loopbuy_existing_images ) ) ); ?></strong>
+								<span><?php esc_html_e( 'These stay attached when you save.', 'loopbuy' ); ?></span>
+							</div>
+							<ul class="loopbuy-existing-photo-grid">
+								<?php foreach ( $loopbuy_existing_images as $loopbuy_existing_index => $loopbuy_existing_image ) : ?>
+									<?php
+									$loopbuy_existing_url = is_array( $loopbuy_existing_image ) && isset( $loopbuy_existing_image['image_url'] ) && is_string( $loopbuy_existing_image['image_url'] )
+										? esc_url_raw( $loopbuy_existing_image['image_url'], array( 'http', 'https' ) )
+										: '';
+
+									if ( '' === $loopbuy_existing_url ) {
+										continue;
+									}
+									?>
+									<li>
+										<img src="<?php echo esc_url( $loopbuy_existing_url ); ?>" alt="<?php echo esc_attr( sprintf( __( 'Existing photo %d', 'loopbuy' ), $loopbuy_existing_index + 1 ) ); ?>" loading="lazy" decoding="async">
+										<?php if ( 0 === $loopbuy_existing_index ) : ?><span><?php esc_html_e( 'Cover', 'loopbuy' ); ?></span><?php endif; ?>
+									</li>
+								<?php endforeach; ?>
+							</ul>
+						</div>
+					<?php endif; ?>
+
+					<?php if ( $loopbuy_remaining_image_slots > 0 ) : ?>
+					<div
+						class="loopbuy-photo-picker"
+						id="loopbuy-photo-picker"
+						data-max-files="<?php echo esc_attr( (string) $loopbuy_remaining_image_slots ); ?>"
+						data-existing-files="<?php echo esc_attr( (string) count( $loopbuy_existing_images ) ); ?>"
+						data-max-size-bytes="<?php echo esc_attr( (string) ( $loopbuy_image_limit_mb * MB_IN_BYTES ) ); ?>"
+					>
+						<label for="loopbuy-sell-photos" class="loopbuy-photo-upload" id="loopbuy-photo-dropzone">
+							<svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 15.5V4M12 4L7.5 8.5M12 4L16.5 8.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15.5V17.5C4 18.6046 4.89543 19.5 6 19.5H18C19.1046 19.5 20 18.6046 20 17.5V15.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+							<span class="loopbuy-photo-upload-copy">
+								<strong class="loopbuy-photo-upload-title" id="loopbuy-photo-upload-title"><?php esc_html_e( 'Choose photos', 'loopbuy' ); ?></strong>
+								<span class="loopbuy-photo-upload-help" id="loopbuy-photo-help">
+									<?php
+									printf(
+										/* translators: %d is the current per-file server limit in megabytes. */
+										esc_html__( 'Choose up to %1$d JPEG, PNG, WebP, or GIF images, %2$d MB each. You can also drop them here.', 'loopbuy' ),
+										(int) $loopbuy_remaining_image_slots,
+										(int) $loopbuy_image_limit_mb
+									);
+									?>
+								</span>
+							</span>
+							<input class="loopbuy-photo-input" type="file" id="loopbuy-sell-photos" name="loopbuy_photos[]" accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif" aria-describedby="loopbuy-photo-help loopbuy-photo-status" multiple>
+						</label>
+
+						<div class="loopbuy-photo-selection" id="loopbuy-photo-selection" hidden>
+							<div class="loopbuy-photo-selection-header">
+								<div>
+									<strong id="loopbuy-photo-count"><?php esc_html_e( 'No photos selected', 'loopbuy' ); ?></strong>
+									<span><?php esc_html_e( 'The first photo will be the listing cover.', 'loopbuy' ); ?></span>
+								</div>
+								<button class="loopbuy-photo-clear" id="loopbuy-photo-clear" type="button"><?php esc_html_e( 'Clear all', 'loopbuy' ); ?></button>
+							</div>
+							<ul class="loopbuy-photo-preview-grid" id="loopbuy-photo-preview" aria-label="<?php esc_attr_e( 'Selected listing photos', 'loopbuy' ); ?>"></ul>
+						</div>
+
+						<p class="loopbuy-photo-status" id="loopbuy-photo-status" role="status" aria-live="polite"></p>
+						<noscript><p class="loopbuy-photo-noscript"><?php esc_html_e( 'Your browser will show the number of selected files next to the file chooser. JavaScript is required for photo previews.', 'loopbuy' ); ?></p></noscript>
+					</div>
+					<?php else : ?>
+						<p class="loopbuy-photo-status" data-state="info"><?php esc_html_e( 'This listing already has the maximum of 10 photos.', 'loopbuy' ); ?></p>
+					<?php endif; ?>
 				</div>
 
 				<div class="loopbuy-sell-field">
@@ -270,11 +448,16 @@ get_header();
 				<div class="loopbuy-ai-panel">
 					<div class="loopbuy-ai-panel-label">
 						<span aria-hidden="true">&#10024;</span>
-						<span><?php esc_html_e( 'Automatic scam screening runs server-side when you submit.', 'loopbuy' ); ?></span>
+						<span><?php esc_html_e( 'You can edit or remove this listing later from My Listings.', 'loopbuy' ); ?></span>
 					</div>
 				</div>
 
-				<button type="submit" class="loopbuy-sell-submit" <?php disabled( ! is_string( $loopbuy_sell_csrf ) || is_wp_error( $loopbuy_categories ) ); ?>><?php esc_html_e( 'Submit listing for review', 'loopbuy' ); ?></button>
+				<div class="loopbuy-sell-submit-row">
+					<?php if ( $loopbuy_edit_mode ) : ?>
+						<a class="loopbuy-sell-cancel" href="<?php echo esc_url( home_url( '/my-listings/' ) ); ?>"><?php esc_html_e( 'Cancel', 'loopbuy' ); ?></a>
+					<?php endif; ?>
+					<button type="submit" class="loopbuy-sell-submit" <?php disabled( ! is_string( $loopbuy_sell_csrf ) || is_wp_error( $loopbuy_categories ) ); ?>><?php echo esc_html( $loopbuy_edit_mode ? __( 'Save listing', 'loopbuy' ) : __( 'Post listing', 'loopbuy' ) ); ?></button>
+				</div>
 			</form>
 		<?php endif; ?>
 	</div>

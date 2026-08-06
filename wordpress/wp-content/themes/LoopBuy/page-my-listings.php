@@ -11,17 +11,81 @@
 $loopbuy_marketplace_user = function_exists( 'loopbuy_marketplace_current_user' )
 	? loopbuy_marketplace_current_user()
 	: new WP_Error( 'loopbuy_marketplace_bridge_unavailable', __( 'The marketplace account service is unavailable.', 'loopbuy' ) );
-$loopbuy_my_listings      = is_array( $loopbuy_marketplace_user ) && function_exists( 'loopbuy_marketplace_my_listings' )
-	? loopbuy_marketplace_my_listings()
+$loopbuy_mylistings_errors = array();
+$loopbuy_mylistings_csrf   = is_array( $loopbuy_marketplace_user ) && function_exists( 'loopbuy_marketplace_csrf_token' )
+	? loopbuy_marketplace_csrf_token()
+	: null;
+$loopbuy_request_method    = isset( $_SERVER['REQUEST_METHOD'] ) ? strtoupper( (string) $_SERVER['REQUEST_METHOD'] ) : 'GET';
+
+// Process owner actions before get_header() so successful mutations use PRG.
+if ( 'POST' === $loopbuy_request_method && is_array( $loopbuy_marketplace_user ) ) {
+	$loopbuy_action     = isset( $_POST['loopbuy_listing_action'] ) && is_string( $_POST['loopbuy_listing_action'] )
+		? sanitize_key( wp_unslash( $_POST['loopbuy_listing_action'] ) )
+		: '';
+	$loopbuy_action_id  = isset( $_POST['loopbuy_listing_id'] ) && is_scalar( $_POST['loopbuy_listing_id'] )
+		? absint( wp_unslash( $_POST['loopbuy_listing_id'] ) )
+		: 0;
+	$loopbuy_action_csrf = isset( $_POST['loopbuy_marketplace_csrf'] ) ? $_POST['loopbuy_marketplace_csrf'] : '';
+
+	if ( 'archive' === $loopbuy_action && function_exists( 'loopbuy_marketplace_archive_listing' ) ) {
+		$loopbuy_action_result = loopbuy_marketplace_archive_listing( $loopbuy_action_id, $loopbuy_action_csrf );
+
+		if ( is_wp_error( $loopbuy_action_result ) ) {
+			$loopbuy_mylistings_errors[] = $loopbuy_action_result->get_error_message();
+		} else {
+			wp_safe_redirect( add_query_arg( 'removed', $loopbuy_action_id, home_url( '/my-listings/' ) ) );
+			exit;
+		}
+	} elseif ( 'recheck' === $loopbuy_action && function_exists( 'loopbuy_marketplace_reassess_listing' ) ) {
+		$loopbuy_action_result = loopbuy_marketplace_reassess_listing( $loopbuy_action_id, $loopbuy_action_csrf );
+
+		if ( is_wp_error( $loopbuy_action_result ) ) {
+			$loopbuy_mylistings_errors[] = $loopbuy_action_result->get_error_message();
+		} else {
+			wp_safe_redirect( add_query_arg( 'checked', $loopbuy_action_id, home_url( '/my-listings/' ) ) );
+			exit;
+		}
+	} else {
+		$loopbuy_mylistings_errors[] = __( 'That listing action is unavailable. Reload the page and try again.', 'loopbuy' );
+	}
+}
+
+$loopbuy_my_listings = is_array( $loopbuy_marketplace_user ) && function_exists( 'loopbuy_marketplace_my_listings' )
+	? loopbuy_marketplace_my_listings( ! empty( $loopbuy_mylistings_errors ) )
 	: array();
 $loopbuy_posted_id        = isset( $_GET['posted'] ) && is_string( $_GET['posted'] ) && ctype_digit( wp_unslash( $_GET['posted'] ) )
 	? (int) $_GET['posted']
 	: 0;
-$loopbuy_partial_upload   = $loopbuy_posted_id > 0
+$loopbuy_updated_id       = isset( $_GET['updated'] ) && is_string( $_GET['updated'] ) && ctype_digit( wp_unslash( $_GET['updated'] ) )
+	? (int) $_GET['updated']
+	: 0;
+$loopbuy_partial_upload   = ( $loopbuy_posted_id > 0 || $loopbuy_updated_id > 0 )
 	&& isset( $_GET['upload'] )
 	&& is_string( $_GET['upload'] )
 	&& 'partial' === sanitize_key( wp_unslash( $_GET['upload'] ) );
+$loopbuy_removed_id       = isset( $_GET['removed'] ) && is_string( $_GET['removed'] ) && ctype_digit( wp_unslash( $_GET['removed'] ) )
+	? (int) $_GET['removed']
+	: 0;
+$loopbuy_checked_id       = isset( $_GET['checked'] ) && is_string( $_GET['checked'] ) && ctype_digit( wp_unslash( $_GET['checked'] ) )
+	? (int) $_GET['checked']
+	: 0;
+$loopbuy_show_archived    = isset( $_GET['show'] ) && is_string( $_GET['show'] ) && 'archived' === sanitize_key( wp_unslash( $_GET['show'] ) );
 $loopbuy_sell_page_url    = home_url( '/sell/' );
+
+if ( is_array( $loopbuy_my_listings ) ) {
+	$loopbuy_my_listings = array_values(
+		array_filter(
+			$loopbuy_my_listings,
+			static function ( $listing ) use ( $loopbuy_show_archived ) {
+				$status = is_array( $listing ) && isset( $listing['status'] ) && is_string( $listing['status'] )
+					? sanitize_key( $listing['status'] )
+					: '';
+
+				return $loopbuy_show_archived ? 'archived' === $status : 'archived' !== $status;
+			}
+		)
+	);
+}
 
 if ( is_array( $loopbuy_marketplace_user ) && ! function_exists( 'loopbuy_marketplace_my_listings' ) ) {
 	$loopbuy_my_listings = new WP_Error( 'loopbuy_marketplace_bridge_unavailable', __( 'Your marketplace listings are unavailable.', 'loopbuy' ) );
@@ -36,12 +100,17 @@ get_header();
 			<div class="loopbuy-mylistings-heading">
 				<h1><?php esc_html_e( 'My Listings', 'loopbuy' ); ?></h1>
 				<?php if ( is_array( $loopbuy_marketplace_user ) ) : ?>
-					<a href="<?php echo esc_url( $loopbuy_sell_page_url ); ?>" class="loopbuy-mylistings-new-btn">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-							<path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-						</svg>
-						<?php esc_html_e( 'New listing', 'loopbuy' ); ?>
-					</a>
+					<div class="loopbuy-mylistings-heading-actions">
+						<a href="<?php echo esc_url( $loopbuy_show_archived ? home_url( '/my-listings/' ) : add_query_arg( 'show', 'archived', home_url( '/my-listings/' ) ) ); ?>" class="loopbuy-mylistings-archive-link">
+							<?php echo esc_html( $loopbuy_show_archived ? __( 'Current listings', 'loopbuy' ) : __( 'Archived', 'loopbuy' ) ); ?>
+						</a>
+						<a href="<?php echo esc_url( $loopbuy_sell_page_url ); ?>" class="loopbuy-mylistings-new-btn">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+								<path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+							</svg>
+							<?php esc_html_e( 'New listing', 'loopbuy' ); ?>
+						</a>
+					</div>
 				<?php endif; ?>
 			</div>
 
@@ -56,6 +125,30 @@ get_header();
 					?>
 				</p>
 			<?php endif; ?>
+
+			<?php if ( $loopbuy_updated_id > 0 ) : ?>
+				<p class="loopbuy-mylistings-status" data-state="<?php echo esc_attr( $loopbuy_partial_upload ? 'error' : 'success' ); ?>" role="status">
+					<?php
+					echo esc_html(
+						$loopbuy_partial_upload
+							? __( 'Your listing details were updated, but one or more new images could not be uploaded.', 'loopbuy' )
+							: __( 'Your listing was updated and its current publication status is shown below.', 'loopbuy' )
+					);
+					?>
+				</p>
+			<?php endif; ?>
+
+			<?php if ( $loopbuy_removed_id > 0 ) : ?>
+				<p class="loopbuy-mylistings-status" data-state="success" role="status"><?php esc_html_e( 'The listing was removed from the marketplace and moved to Archived.', 'loopbuy' ); ?></p>
+			<?php endif; ?>
+
+			<?php if ( $loopbuy_checked_id > 0 ) : ?>
+				<p class="loopbuy-mylistings-status" data-state="success" role="status"><?php esc_html_e( 'The safety check finished. The current result is shown below.', 'loopbuy' ); ?></p>
+			<?php endif; ?>
+
+			<?php foreach ( array_unique( $loopbuy_mylistings_errors ) as $loopbuy_mylistings_error ) : ?>
+				<p class="loopbuy-mylistings-status" data-state="error" role="alert"><?php echo esc_html( $loopbuy_mylistings_error ); ?></p>
+			<?php endforeach; ?>
 
 			<?php if ( ! is_array( $loopbuy_marketplace_user ) ) : ?>
 				<div class="loopbuy-profile-login-notice">
@@ -72,8 +165,8 @@ get_header();
 							<path d="M3.3 7L12 12M12 12L20.7 7M12 12V21.5" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
 						</svg>
 					</span>
-					<h2><?php esc_html_e( 'You have no listings yet', 'loopbuy' ); ?></h2>
-					<a href="<?php echo esc_url( $loopbuy_sell_page_url ); ?>" class="loopbuy-mylistings-empty-btn"><?php esc_html_e( 'Post your first item', 'loopbuy' ); ?></a>
+					<h2><?php echo esc_html( $loopbuy_show_archived ? __( 'Archived is empty', 'loopbuy' ) : __( 'You have no listings yet', 'loopbuy' ) ); ?></h2>
+					<a href="<?php echo esc_url( $loopbuy_show_archived ? home_url( '/my-listings/' ) : $loopbuy_sell_page_url ); ?>" class="loopbuy-mylistings-empty-btn"><?php echo esc_html( $loopbuy_show_archived ? __( 'Back to current listings', 'loopbuy' ) : __( 'Post your first item', 'loopbuy' ) ); ?></a>
 				</div>
 			<?php else : ?>
 				<div class="loopbuy-mylistings-list">
@@ -118,7 +211,16 @@ get_header();
 						} elseif ( 'rejected' === $loopbuy_moderation ) {
 							$loopbuy_status_label = __( 'Rejected', 'loopbuy' );
 							$loopbuy_status_class = 'status-active status-rejected';
-						} elseif ( 'under_review' === $loopbuy_status || in_array( $loopbuy_moderation, array( 'pending', 'review', 'unavailable' ), true ) ) {
+						} elseif ( 'unavailable' === $loopbuy_moderation ) {
+							$loopbuy_status_label = __( 'Safety check unavailable', 'loopbuy' );
+							$loopbuy_status_class = 'status-active status-unavailable';
+						} elseif ( 'review' === $loopbuy_moderation ) {
+							$loopbuy_status_label = __( 'Safety review needed', 'loopbuy' );
+							$loopbuy_status_class = 'status-active status-under-review';
+						} elseif ( 'pending' === $loopbuy_moderation ) {
+							$loopbuy_status_label = __( 'Safety check pending', 'loopbuy' );
+							$loopbuy_status_class = 'status-active status-under-review';
+						} elseif ( 'under_review' === $loopbuy_status ) {
 							$loopbuy_status_label = __( 'Under review', 'loopbuy' );
 							$loopbuy_status_class = 'status-active status-under-review';
 						} elseif ( 'active' === $loopbuy_status && 'approved' === $loopbuy_moderation ) {
@@ -130,6 +232,7 @@ get_header();
 						}
 
 						$loopbuy_detail_url = home_url( '/product-detail/?id=' . $loopbuy_listing_id );
+						$loopbuy_edit_url   = add_query_arg( 'edit', $loopbuy_listing_id, $loopbuy_sell_page_url );
 						$loopbuy_image_raw  = isset( $loopbuy_listing['image_url'] ) && is_string( $loopbuy_listing['image_url'] )
 							? $loopbuy_listing['image_url']
 							: ( isset( $loopbuy_listing['image'] ) && is_string( $loopbuy_listing['image'] ) ? $loopbuy_listing['image'] : '' );
@@ -164,6 +267,34 @@ get_header();
 								<?php endif; ?>
 
 								<span class="loopbuy-status-badge <?php echo esc_attr( $loopbuy_status_class ); ?>"><?php echo esc_html( $loopbuy_status_label ); ?></span>
+
+								<div class="loopbuy-mylistings-item-actions">
+									<?php if ( ! in_array( $loopbuy_status, array( 'sold', 'archived' ), true ) && 'rejected' !== $loopbuy_moderation ) : ?>
+										<a class="loopbuy-mylistings-action loopbuy-mylistings-action-edit" href="<?php echo esc_url( $loopbuy_edit_url ); ?>"><?php esc_html_e( 'Edit', 'loopbuy' ); ?></a>
+									<?php endif; ?>
+
+									<?php if ( ! in_array( $loopbuy_status, array( 'sold', 'archived' ), true ) && 'rejected' !== $loopbuy_moderation && ( 'under_review' === $loopbuy_status || in_array( $loopbuy_moderation, array( 'pending', 'review', 'unavailable' ), true ) ) ) : ?>
+										<form method="post" action="<?php echo esc_url( home_url( '/my-listings/' ) ); ?>" class="loopbuy-mylistings-action-form">
+											<input type="hidden" name="loopbuy_listing_action" value="recheck">
+											<input type="hidden" name="loopbuy_listing_id" value="<?php echo esc_attr( $loopbuy_listing_id ); ?>">
+											<?php if ( is_string( $loopbuy_mylistings_csrf ) ) : ?>
+												<input type="hidden" name="loopbuy_marketplace_csrf" value="<?php echo esc_attr( $loopbuy_mylistings_csrf ); ?>">
+											<?php endif; ?>
+											<button type="submit" class="loopbuy-mylistings-action loopbuy-mylistings-action-recheck" <?php disabled( ! is_string( $loopbuy_mylistings_csrf ) ); ?>><?php esc_html_e( 'Run safety check again', 'loopbuy' ); ?></button>
+										</form>
+									<?php endif; ?>
+
+									<?php if ( ! in_array( $loopbuy_status, array( 'sold', 'archived' ), true ) ) : ?>
+										<form method="post" action="<?php echo esc_url( home_url( '/my-listings/' ) ); ?>" class="loopbuy-mylistings-action-form" onsubmit="return window.confirm('<?php echo esc_js( __( 'Remove this listing from the marketplace? It will be kept in Archived.', 'loopbuy' ) ); ?>');">
+											<input type="hidden" name="loopbuy_listing_action" value="archive">
+											<input type="hidden" name="loopbuy_listing_id" value="<?php echo esc_attr( $loopbuy_listing_id ); ?>">
+											<?php if ( is_string( $loopbuy_mylistings_csrf ) ) : ?>
+												<input type="hidden" name="loopbuy_marketplace_csrf" value="<?php echo esc_attr( $loopbuy_mylistings_csrf ); ?>">
+											<?php endif; ?>
+											<button type="submit" class="loopbuy-mylistings-action loopbuy-mylistings-action-delete" <?php disabled( ! is_string( $loopbuy_mylistings_csrf ) ); ?>><?php esc_html_e( 'Delete', 'loopbuy' ); ?></button>
+										</form>
+									<?php endif; ?>
+								</div>
 							</div>
 						</article>
 					<?php endforeach; ?>

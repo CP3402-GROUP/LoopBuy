@@ -271,6 +271,52 @@ loopbuy_assistant_test_assert( 200 === $response->status, 'favourite remove did 
 loopbuy_assistant_test_assert( array( 'listing_id' => 13, 'saved' => false ) === $response->data, 'favourite remove response changed' );
 loopbuy_assistant_test_assert( 'DELETE' === $remote['args']['method'], 'favourite remove did not use DELETE internally' );
 
+$GLOBALS['loopbuy_test_backend_response'] = array(
+	'response' => array( 'code' => 200 ),
+	'body'     => json_encode( array( 'listing_id' => 13, 'revision' => 8 ) ),
+);
+$updated_listing = loopbuy_marketplace_update_listing(
+	13,
+	7,
+	array(
+		'category_id'    => 2,
+		'title'          => 'Updated listing',
+		'description'    => 'Updated description',
+		'brand'          => 'LoopBuy',
+		'location'       => 'Singapore',
+		'price'          => '45.50',
+		'item_condition' => 'like-new',
+	),
+	$csrf
+);
+$remote          = $GLOBALS['loopbuy_test_remote_requests'][ count( $GLOBALS['loopbuy_test_remote_requests'] ) - 1 ];
+$updated_payload = json_decode( $remote['args']['body'], true );
+loopbuy_assistant_test_assert( is_array( $updated_listing ) && 13 === $updated_listing['listing_id'], 'listing update response changed' );
+loopbuy_assistant_test_assert( 'PATCH' === $remote['args']['method'], 'listing update did not use PATCH internally' );
+loopbuy_assistant_test_assert( 'http://api:8080/api/v1/listings/13' === $remote['url'], 'listing update used the wrong backend route' );
+loopbuy_assistant_test_assert( 7 === $updated_payload['revision'], 'listing update omitted the revision precondition' );
+loopbuy_assistant_test_assert( ! array_key_exists( 'images', $updated_payload ), 'scalar listing update unexpectedly replaced images' );
+
+$GLOBALS['loopbuy_test_backend_response'] = array(
+	'response' => array( 'code' => 201 ),
+	'body'     => json_encode( array( 'assessment_id' => 4, 'listing_id' => 13, 'label' => 'low_risk' ) ),
+);
+$assessment = loopbuy_marketplace_reassess_listing( 13, $csrf );
+$remote     = $GLOBALS['loopbuy_test_remote_requests'][ count( $GLOBALS['loopbuy_test_remote_requests'] ) - 1 ];
+loopbuy_assistant_test_assert( is_array( $assessment ) && 4 === $assessment['assessment_id'], 'listing reassessment response changed' );
+loopbuy_assistant_test_assert( 'POST' === $remote['args']['method'], 'listing reassessment did not use POST internally' );
+loopbuy_assistant_test_assert( 'http://api:8080/api/v1/listings/13/scam-assessments' === $remote['url'], 'listing reassessment used the wrong backend route' );
+
+$GLOBALS['loopbuy_test_backend_response'] = array(
+	'response' => array( 'code' => 204 ),
+	'body'     => '',
+);
+$archived = loopbuy_marketplace_archive_listing( 13, $csrf );
+$remote   = $GLOBALS['loopbuy_test_remote_requests'][ count( $GLOBALS['loopbuy_test_remote_requests'] ) - 1 ];
+loopbuy_assistant_test_assert( true === $archived, 'listing archive did not succeed' );
+loopbuy_assistant_test_assert( 'DELETE' === $remote['args']['method'], 'listing archive did not use DELETE internally' );
+loopbuy_assistant_test_assert( 'http://api:8080/api/v1/listings/13' === $remote['url'], 'listing archive used the wrong backend route' );
+
 $request_count = count( $GLOBALS['loopbuy_test_remote_requests'] );
 $response      = loopbuy_marketplace_assistant_chat(
 	new WP_REST_Request( array( 'X-LoopBuy-CSRF' => str_repeat( 'b', 64 ) ), array( 'message' => 'Find a bicycle' ) )

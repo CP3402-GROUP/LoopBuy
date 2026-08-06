@@ -30,6 +30,7 @@ type Server struct {
 	emailHourlyLimit         int
 	media                    *localmedia.Storage
 	ml                       *ml.Client
+	scamModerationEnabled    bool
 	embedder                 ai.Embedder
 	vectors                  ai.VectorStore
 	chat                     ai.ChatModel
@@ -60,6 +61,7 @@ type Config struct {
 	EmailHourlyLimit         int
 	Media                    *localmedia.Storage
 	ML                       *ml.Client
+	ScamModerationEnabled    bool
 	Embedder                 ai.Embedder
 	Vectors                  ai.VectorStore
 	Chat                     ai.ChatModel
@@ -98,7 +100,7 @@ func New(config Config) http.Handler {
 		verificationMailer: config.VerificationMailer, verificationURL: config.VerificationURL,
 		verificationTTL: config.VerificationTTL, verificationSecret: config.VerificationSecret,
 		emailHourlyLimit: config.EmailHourlyLimit,
-		media:            config.Media, ml: config.ML,
+		media:            config.Media, ml: config.ML, scamModerationEnabled: config.ScamModerationEnabled,
 		embedder: config.Embedder, vectors: config.Vectors, chat: config.Chat,
 		openAIMaxRequestsHour: config.OpenAIMaxRequestsHour, openAIMaxRequestsUserDay: config.OpenAIMaxRequestsUserDay,
 		qwenMaxRequestsHour: config.QwenMaxRequestsHour, qwenMaxRequestsUserDay: config.QwenMaxRequestsUserDay,
@@ -194,6 +196,10 @@ func (s *Server) ready(response http.ResponseWriter, request *http.Request) {
 	components := map[string]string{
 		"mysql": "ok", "ml": "ok", "qdrant": "ok", "embeddings": "enabled_unverified",
 		"qwen": "enabled_unverified", "google_oauth": "enabled", "email_delivery": "enabled_unverified",
+		"scam_moderation": "enabled",
+	}
+	if !s.scamModerationEnabled {
+		components["scam_moderation"] = "disabled"
 	}
 	status := http.StatusOK
 	degraded := false

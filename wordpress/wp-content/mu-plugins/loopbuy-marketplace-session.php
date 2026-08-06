@@ -1995,6 +1995,169 @@ function loopbuy_marketplace_create_listing( $fields, $csrf_token ) {
 }
 
 /**
+ * Update the scalar fields of one listing owned by the current account.
+ *
+ * Listing images are intentionally excluded from this payload. They are
+ * managed through the dedicated local-media endpoints so a text edit cannot
+ * accidentally replace or orphan files.
+ *
+ * @param int   $listing_id Positive listing ID.
+ * @param int   $revision   Current optimistic-lock revision.
+ * @param array $fields     Validated form fields.
+ * @param mixed $csrf_token Submitted CSRF token.
+ * @return array|WP_Error Updated raw listing DTO.
+ */
+function loopbuy_marketplace_update_listing( $listing_id, $revision, $fields, $csrf_token ) {
+	$verified = loopbuy_marketplace_verify_mutation( $csrf_token );
+
+	if ( is_wp_error( $verified ) ) {
+		return $verified;
+	}
+
+	$listing_id = is_numeric( $listing_id ) ? (int) $listing_id : 0;
+	$revision   = is_numeric( $revision ) ? (int) $revision : 0;
+
+	if ( $listing_id < 1 || $revision < 1 || ! is_array( $fields ) ) {
+		return new WP_Error( 'loopbuy_marketplace_invalid_listing_update', __( 'The listing update is invalid. Reload the page and try again.', 'loopbuy' ) );
+	}
+
+	$category_id = isset( $fields['category_id'] ) && is_numeric( $fields['category_id'] ) ? (int) $fields['category_id'] : 0;
+	$title       = isset( $fields['title'] ) && is_string( $fields['title'] ) ? trim( sanitize_text_field( $fields['title'] ) ) : '';
+	$description = isset( $fields['description'] ) && is_string( $fields['description'] ) ? trim( sanitize_textarea_field( $fields['description'] ) ) : '';
+	$brand       = isset( $fields['brand'] ) && is_string( $fields['brand'] ) ? trim( sanitize_text_field( $fields['brand'] ) ) : '';
+	$location    = isset( $fields['location'] ) && is_string( $fields['location'] ) ? trim( sanitize_text_field( $fields['location'] ) ) : '';
+	$price       = isset( $fields['price'] ) && is_numeric( $fields['price'] ) ? (float) $fields['price'] : -1;
+	$condition   = isset( $fields['item_condition'] ) && is_string( $fields['item_condition'] )
+		? str_replace( '-', '_', sanitize_key( $fields['item_condition'] ) )
+		: '';
+
+	if ( $category_id < 1
+		|| '' === $title
+		|| strlen( $title ) > 150
+		|| strlen( $description ) > 10000
+		|| strlen( $brand ) > 100
+		|| strlen( $location ) > 120
+		|| ! is_finite( $price )
+		|| $price < 0
+		|| $price > 99999999.99
+		|| ! in_array( $condition, array( 'new', 'like_new', 'good', 'fair' ), true ) ) {
+		return new WP_Error( 'loopbuy_marketplace_invalid_listing_update', __( 'One or more listing fields are incomplete or outside the allowed limits.', 'loopbuy' ) );
+	}
+
+	$response = loopbuy_marketplace_authenticated_request(
+		'PATCH',
+		'/api/v1/listings/' . $listing_id,
+		array(
+			'revision'       => $revision,
+			'category_id'    => $category_id,
+			'title'          => $title,
+			'description'    => $description,
+			'brand'          => $brand,
+			'location'       => $location,
+			'price'          => $price,
+			'currency'       => 'SGD',
+			'item_condition' => $condition,
+		)
+	);
+
+	if ( is_wp_error( $response ) ) {
+		return $response;
+	}
+
+	if ( 200 !== $response['status'] || ! is_array( $response['data'] ) ) {
+		$message = 409 === $response['status']
+			? __( 'This listing changed in another tab. Reload it before saving again.', 'loopbuy' )
+			: loopbuy_marketplace_problem_message( $response, __( 'The listing could not be updated right now.', 'loopbuy' ) );
+		return new WP_Error( 'loopbuy_marketplace_listing_update_failed', $message );
+	}
+
+	$response_listing_id = isset( $response['data']['listing_id'] ) && is_numeric( $response['data']['listing_id'] )
+		? (int) $response['data']['listing_id']
+		: 0;
+
+	if ( $response_listing_id !== $listing_id ) {
+		return new WP_Error( 'loopbuy_marketplace_listing_update_contract', __( 'The listing service returned an invalid update response.', 'loopbuy' ) );
+	}
+
+	return $response['data'];
+}
+
+/**
+ * Archive one listing owned by the current account.
+ *
+ * The Go DELETE contract is deliberately recoverable: it removes the listing
+ * from the public marketplace by setting its status to archived.
+ *
+ * @param int   $listing_id Positive listing ID.
+ * @param mixed $csrf_token Submitted CSRF token.
+ * @return true|WP_Error
+ */
+function loopbuy_marketplace_archive_listing( $listing_id, $csrf_token ) {
+	$verified = loopbuy_marketplace_verify_mutation( $csrf_token );
+
+	if ( is_wp_error( $verified ) ) {
+		return $verified;
+	}
+
+	$listing_id = is_numeric( $listing_id ) ? (int) $listing_id : 0;
+
+	if ( $listing_id < 1 ) {
+		return new WP_Error( 'loopbuy_marketplace_invalid_listing_archive', __( 'The listing ID is invalid.', 'loopbuy' ) );
+	}
+
+	$response = loopbuy_marketplace_authenticated_request( 'DELETE', '/api/v1/listings/' . $listing_id );
+
+	if ( is_wp_error( $response ) ) {
+		return $response;
+	}
+
+	if ( 204 !== $response['status'] ) {
+		return new WP_Error(
+			'loopbuy_marketplace_listing_archive_failed',
+			loopbuy_marketplace_problem_message( $response, __( 'The listing could not be archived right now.', 'loopbuy' ) )
+		);
+	}
+
+	return true;
+}
+
+/**
+ * Run a fresh automated scam assessment for a listing owned by the account.
+ *
+ * @param int   $listing_id Positive listing ID.
+ * @param mixed $csrf_token Submitted CSRF token.
+ * @return array|WP_Error Assessment DTO.
+ */
+function loopbuy_marketplace_reassess_listing( $listing_id, $csrf_token ) {
+	$verified = loopbuy_marketplace_verify_mutation( $csrf_token );
+
+	if ( is_wp_error( $verified ) ) {
+		return $verified;
+	}
+
+	$listing_id = is_numeric( $listing_id ) ? (int) $listing_id : 0;
+
+	if ( $listing_id < 1 ) {
+		return new WP_Error( 'loopbuy_marketplace_invalid_listing_recheck', __( 'The listing ID is invalid.', 'loopbuy' ) );
+	}
+
+	$response = loopbuy_marketplace_authenticated_request( 'POST', '/api/v1/listings/' . $listing_id . '/scam-assessments' );
+
+	if ( is_wp_error( $response ) ) {
+		return $response;
+	}
+
+	if ( 201 !== $response['status'] || ! is_array( $response['data'] ) ) {
+		return new WP_Error(
+			'loopbuy_marketplace_listing_recheck_failed',
+			loopbuy_marketplace_problem_message( $response, __( 'The safety check could not be run right now.', 'loopbuy' ) )
+		);
+	}
+
+	return $response['data'];
+}
+
+/**
  * Validate and encode one PHP upload as the backend multipart contract.
  *
  * @param array  $file       One normalized $_FILES row.

@@ -47,6 +47,7 @@ class ScamResponse(BaseModel):
     score: float
     label: Literal["low_risk", "needs_review", "high_risk"]
     reasons: list[str]
+    risk_signal_count: int = Field(ge=0, le=len(SIGNALS))
     model_version: str
 
 
@@ -93,6 +94,7 @@ def predict_scam(request: ScamRequest) -> ScamResponse:
     text = f"{request.title}\n{request.description}\ncategory {request.category}\nprice {request.price:.2f}"
     probability = float(scam_pipeline.predict_proba([text])[0][1])
     reasons = [reason for pattern, reason in SIGNALS if pattern.search(text)]
+    risk_signal_count = len(reasons)
 
     # Lexical signals are deliberately additive: the small bundled dataset is a
     # transparent baseline, not enough evidence to auto-ban a seller.
@@ -110,6 +112,7 @@ def predict_scam(request: ScamRequest) -> ScamResponse:
         score=round(adjusted, 6),
         label=label,
         reasons=reasons,
+        risk_signal_count=risk_signal_count,
         model_version=artifact["version"],
     )
 

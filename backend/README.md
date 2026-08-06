@@ -35,11 +35,15 @@ MySQL remains the source of truth. Qdrant contains a rebuildable search index, n
 
 ### Listing write and moderation flow
 
-1. The API validates the listing and calls `POST /v1/scam/predict` on the ML service.
-2. A `low_risk` result creates or updates the listing as `active` / `approved`; every other result becomes `under_review` / `pending`.
-3. The listing, assessment, images, and `listing.upsert` outbox event are committed together in MySQL.
-4. The background worker embeds eligible listing text with OpenAI and upserts the named vector in Qdrant. Ineligible, rejected, sold, or archived listings have their vector removed.
-5. Failed index operations remain in the outbox and are retried with exponential backoff capped at 300 seconds.
+1. The API validates the listing. When `SCAM_MODERATION_ENABLED=true`, it calls `POST /v1/scam/predict` on the ML service.
+2. With the temporary deploy switch set to `false`, listing writes skip scam classification and publish as `active` / `approved` with the explicit `not_screened` label. The storefront never presents these listings as Verified; recommendation reranking remains available through the same ML service.
+3. When moderation is enabled, a contract-valid `low_risk` result with no concrete lexical scam signal creates or updates the listing as `active` / `approved`. A narrow model-only borderline result (`needs_review`, score from `0.45` up to but excluding `0.55`, and zero concrete signals) is also published, but retains its score and `needs_review` label and is never shown as verified.
+4. Completed assessments outside that bounded release rule become `under_review` / `review`; ML transport or response-contract failures become `under_review` / `unavailable`. A synchronous completed result is therefore never left ambiguously `pending` forever.
+5. The listing, assessment, images, and `listing.upsert` outbox event are committed together in MySQL.
+6. The background worker embeds eligible listing text with OpenAI and upserts the named vector in Qdrant. Ineligible, rejected, sold, or archived listings have their vector removed.
+7. Failed index operations remain in the outbox and are retried with exponential backoff capped at 300 seconds.
+
+Legacy pending rows are not auto-approved from incomplete historical audit data. Migration 011 classifies their completed result as `review` or `unavailable`; the owner-facing **Run safety check again** action calls `POST /api/v1/listings/{id}/scam-assessments`. With moderation enabled, only a fresh response containing `risk_signal_count` can apply the bounded publication rule; with the feature flag off, that fresh write publishes the listing explicitly as `not_screened`.
 
 Every listing response includes a monotonically increasing `revision`. `PATCH /api/v1/listings/{id}` requires the client to copy the current positive revision into the JSON body. Omitting it (or sending zero) returns HTTP 428; sending a stale value returns HTTP 409, so the client must reload the listing and reapply the intended edit. Scam reassessment captures its starting revision internally. Status, moderation, image, content, and reassessment mutations all advance the revision, preventing a slow ML-backed write from overwriting newer state.
 
@@ -135,6 +139,7 @@ Replace all `change-*` and `replace-*` placeholders. Never commit `.env`. `JWT_S
 | `QDRANT_COLLECTION` | `loopbuy_listings_v1` | Collection owned by this backend. |
 | `QDRANT_VECTOR_NAME` | `listing_text_v1` | Named dense vector used for listing text. |
 | `ML_SERVICE_URL` | `http://ml:8000` | Internal FastAPI service root. |
+| `SCAM_MODERATION_ENABLED` | `true` in the standalone API; Compose currently passes `false` | Feature flag for scam classification on listing writes. `false` publishes with `not_screened` and does not disable recommendation reranking. |
 | `QWEN_API_KEY` | none | The only required Qwen credential; sent server-side as a bearer token. |
 | `QWEN_BASE_URL` | `https://dashscope-intl.aliyuncs.com/compatible-mode/v1` | Optional region-specific OpenAI-compatible API override. China/Beijing and US/Virginia keys require their matching regional endpoint. |
 | `QWEN_MODEL` | `qwen3.5-flash` | Qwen model identifier. |

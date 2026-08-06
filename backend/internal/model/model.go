@@ -102,13 +102,14 @@ type Message struct {
 }
 
 type ScamAssessment struct {
-	AssessmentID int64     `json:"assessment_id"`
-	ListingID    int64     `json:"listing_id,omitempty"`
-	Score        float64   `json:"score"`
-	Label        string    `json:"label"`
-	Reasons      []string  `json:"reasons"`
-	ModelVersion string    `json:"model_version"`
-	CreatedAt    time.Time `json:"created_at"`
+	AssessmentID    int64     `json:"assessment_id"`
+	ListingID       int64     `json:"listing_id,omitempty"`
+	Score           float64   `json:"score"`
+	Label           string    `json:"label"`
+	Reasons         []string  `json:"reasons"`
+	RiskSignalCount *int      `json:"risk_signal_count,omitempty"`
+	ModelVersion    string    `json:"model_version"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 type ChatSource struct {

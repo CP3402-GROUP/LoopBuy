@@ -2163,11 +2163,17 @@ components:
           maximum: 1
         label:
           type: string
-          enum: [low_risk, needs_review, high_risk]
+          enum: [low_risk, needs_review, high_risk, not_screened]
+          description: not_screened is returned only when the deploy-time scam moderation feature flag is disabled; it is not a safety verdict.
         reasons:
           type: array
           items:
             type: string
+        risk_signal_count:
+          type: integer
+          minimum: 0
+          maximum: 5
+          description: Number of concrete lexical scam signals found. Zero for not_screened; omitted when screening was unavailable or invalid.
         model_version:
           type: string
         created_at:

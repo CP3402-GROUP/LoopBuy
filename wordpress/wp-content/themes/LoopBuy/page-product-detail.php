@@ -116,6 +116,10 @@ $product_safety_state = isset($product['safety_state'])
 
 if ($product_is_verified) {
     $product_safety_message = __('This listing passed safety screening.', 'loopbuy');
+} elseif ('disabled' === $product_safety_state || 'not_screened' === $product_scam_label) {
+    $product_safety_message = __('Automated scam screening is temporarily disabled. This listing has not been verified, so use normal buying precautions.', 'loopbuy');
+} elseif ('approved' === $product_moderation_status && 'needs_review' === $product_scam_label) {
+    $product_safety_message = __('Automated screening found no concrete scam language, but this borderline result is not a verification. Use normal buying precautions.', 'loopbuy');
 } elseif ('pending' === $product_safety_state) {
     $product_safety_message = __('Safety screening is in progress.', 'loopbuy');
 } elseif ('review' === $product_safety_state) {
@@ -130,6 +134,33 @@ $product_image_url = function_exists( 'loopbuy_product_image_url' )
         isset( $product['image_url'] ) ? $product['image_url'] : '',
         array( 'http', 'https' )
     );
+$product_images = isset( $product['images'] ) && is_array( $product['images'] )
+    ? array_values( $product['images'] )
+    : array();
+
+if ( empty( $product_images ) && '' !== $product_image_url ) {
+    $product_images[] = array(
+        'image_url'  => $product_image_url,
+        'is_primary' => true,
+        'sort_order' => 0,
+    );
+}
+
+$product_image_count = count( $product_images );
+
+if ( $product_image_count > 1 ) {
+    $loopbuy_product_gallery_script = get_template_directory() . '/js/product-gallery.js';
+
+    if ( is_file( $loopbuy_product_gallery_script ) ) {
+        wp_enqueue_script(
+            'loopbuy-product-gallery',
+            get_template_directory_uri() . '/js/product-gallery.js',
+            array(),
+            (string) filemtime( $loopbuy_product_gallery_script ),
+            true
+        );
+    }
+}
 ?>
 
 
@@ -147,13 +178,71 @@ $product_image_url = function_exists( 'loopbuy_product_image_url' )
 
         <section class="product-detail-main">
 
-            <div class="product-detail-image">
+            <div
+                class="product-gallery-shell<?php echo $product_image_count > 1 ? ' has-multiple-images' : ''; ?>"
+                data-product-gallery
+                aria-label="<?php esc_attr_e( 'Listing photos', 'loopbuy' ); ?>"
+            >
+                <figure class="product-detail-image" data-gallery-stage>
+                    <?php if ( $product_image_count > 0 ) : ?>
+                        <img
+                            src="<?php echo esc_url( $product_images[0]['image_url'] ); ?>"
+                            alt="<?php echo esc_attr( sprintf( __( '%1$s, photo %2$d of %3$d', 'loopbuy' ), $product['name'], 1, $product_image_count ) ); ?>"
+                            data-gallery-main
+                            decoding="async"
+                        >
 
-                <img
-                    src="<?php echo esc_url( $product_image_url ); ?>"
-                    alt="<?php echo esc_attr($product['name']); ?>"
-                >
+                        <?php if ( $product_image_count > 1 ) : ?>
+                            <button class="product-gallery-nav product-gallery-prev" type="button" data-gallery-prev aria-label="<?php esc_attr_e( 'Show previous photo', 'loopbuy' ); ?>">
+                                <span aria-hidden="true">&#8249;</span>
+                            </button>
+                            <button class="product-gallery-nav product-gallery-next" type="button" data-gallery-next aria-label="<?php esc_attr_e( 'Show next photo', 'loopbuy' ); ?>">
+                                <span aria-hidden="true">&#8250;</span>
+                            </button>
+                            <figcaption class="product-gallery-count" data-gallery-count aria-live="polite">
+                                <?php echo esc_html( sprintf( __( '%1$d / %2$d', 'loopbuy' ), 1, $product_image_count ) ); ?>
+                            </figcaption>
+                        <?php endif; ?>
+                    <?php else : ?>
+                        <div class="product-gallery-empty" data-gallery-empty role="img" aria-label="<?php esc_attr_e( 'No listing photo available', 'loopbuy' ); ?>">
+                            <svg width="52" height="52" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <rect x="3" y="4" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="1.5"/>
+                                <circle cx="8.5" cy="9" r="1.5" stroke="currentColor" stroke-width="1.5"/>
+                                <path d="M5.5 17L10 12.5L13 15.5L15.5 13L19 16.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span><?php esc_html_e( 'No photo available', 'loopbuy' ); ?></span>
+                        </div>
+                    <?php endif; ?>
+                </figure>
 
+                <?php if ( $product_image_count > 1 ) : ?>
+                    <div class="product-gallery-thumbnails" role="group" aria-label="<?php esc_attr_e( 'Choose a listing photo', 'loopbuy' ); ?>" data-gallery-thumbnails>
+                        <?php foreach ( $product_images as $product_image_index => $product_image ) : ?>
+                            <?php
+                            $product_photo_number = $product_image_index + 1;
+                            $product_photo_alt    = sprintf(
+                                __( '%1$s, photo %2$d of %3$d', 'loopbuy' ),
+                                $product['name'],
+                                $product_photo_number,
+                                $product_image_count
+                            );
+                            ?>
+                            <button
+                                class="product-gallery-thumbnail<?php echo 0 === $product_image_index ? ' is-active' : ''; ?>"
+                                type="button"
+                                data-gallery-thumbnail
+                                data-gallery-index="<?php echo esc_attr( (string) $product_image_index ); ?>"
+                                data-gallery-src="<?php echo esc_url( $product_image['image_url'] ); ?>"
+                                data-gallery-alt="<?php echo esc_attr( $product_photo_alt ); ?>"
+                                aria-label="<?php echo esc_attr( sprintf( __( 'Show photo %1$d of %2$d', 'loopbuy' ), $product_photo_number, $product_image_count ) ); ?>"
+                                aria-pressed="<?php echo 0 === $product_image_index ? 'true' : 'false'; ?>"
+                                tabindex="<?php echo 0 === $product_image_index ? '0' : '-1'; ?>"
+                            >
+                                <img src="<?php echo esc_url( $product_image['image_url'] ); ?>" alt="" loading="lazy" decoding="async">
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             </div>
 
 
@@ -168,7 +257,7 @@ $product_image_url = function_exists( 'loopbuy_product_image_url' )
                     <?php if ($product_is_verified) : ?>
 
                         <span class="product-verified">
-                            ● Verified
+                            &#10003; <?php esc_html_e( 'Verified', 'loopbuy' ); ?>
                         </span>
 
                     <?php endif; ?>

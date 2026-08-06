@@ -95,7 +95,7 @@ $loopbuy_register_url       = home_url( '/register/' );
 					<header class="loopbuy-assistant-chat-header">
 						<div>
 							<h2 id="loopbuy-assistant-chat-title"><?php esc_html_e( 'LoopBuy Finder', 'loopbuy' ); ?></h2>
-							<p><?php esc_html_e( 'RAG search across active, safety-screened listings', 'loopbuy' ); ?></p>
+							<p><?php esc_html_e( 'RAG search across active marketplace listings', 'loopbuy' ); ?></p>
 						</div>
 						<span class="loopbuy-assistant-live-status">
 							<span aria-hidden="true"></span>

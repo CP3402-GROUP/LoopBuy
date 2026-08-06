@@ -45,3 +45,25 @@ func TestQwenDefaultsUseSingleQwenKey(t *testing.T) {
 		t.Fatalf("QwenModel = %q; want qwen3.5-flash", cfg.QwenModel)
 	}
 }
+
+func TestScamModerationDefaultsEnabledOutsideCompose(t *testing.T) {
+	t.Setenv("JWT_SECRET", strings.Repeat("x", 32))
+	t.Setenv("SCAM_MODERATION_ENABLED", "")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if !cfg.ScamModerationEnabled {
+		t.Fatal("ScamModerationEnabled = false, want safe standalone default true")
+	}
+
+	t.Setenv("SCAM_MODERATION_ENABLED", "false")
+	cfg, err = Load()
+	if err != nil {
+		t.Fatalf("Load() with disabled moderation error = %v", err)
+	}
+	if cfg.ScamModerationEnabled {
+		t.Fatal("ScamModerationEnabled = true after explicit false")
+	}
+}

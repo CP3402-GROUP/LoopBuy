@@ -29,8 +29,8 @@ get_header();
 					<span class="loopbuy-about-feature-icon" aria-hidden="true">
 						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
 					</span>
-					<h2 class="loopbuy-about-feature-title"><?php esc_html_e( 'AI Scam Detection', 'loopbuy' ); ?></h2>
-					<p class="loopbuy-about-feature-text"><?php esc_html_e( 'Every listing is screened for suspicious pricing, scam language, and duplicate images.', 'loopbuy' ); ?></p>
+					<h2 class="loopbuy-about-feature-title"><?php esc_html_e( 'Safer Marketplace Controls', 'loopbuy' ); ?></h2>
+					<p class="loopbuy-about-feature-text"><?php esc_html_e( 'Clear listing safety states, reporting-ready moderation data, and seller controls help the community make informed decisions.', 'loopbuy' ); ?></p>
 				</div>
 
 				<div class="loopbuy-about-feature">

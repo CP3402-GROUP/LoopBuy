@@ -24,10 +24,11 @@ type ScamInput struct {
 }
 
 type ScamResult struct {
-	Score        float64  `json:"score"`
-	Label        string   `json:"label"`
-	Reasons      []string `json:"reasons"`
-	ModelVersion string   `json:"model_version"`
+	Score           float64  `json:"score"`
+	Label           string   `json:"label"`
+	Reasons         []string `json:"reasons"`
+	RiskSignalCount *int     `json:"risk_signal_count"`
+	ModelVersion    string   `json:"model_version"`
 }
 
 type Candidate struct {

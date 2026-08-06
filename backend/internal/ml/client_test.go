@@ -14,7 +14,7 @@ func TestScam(t *testing.T) {
 			t.Fatalf("unexpected path %s", request.URL.Path)
 		}
 		response.Header().Set("Content-Type", "application/json")
-		_, _ = response.Write([]byte(`{"score":0.91,"label":"high_risk","reasons":["advance payment"],"model_version":"test"}`))
+		_, _ = response.Write([]byte(`{"score":0.91,"label":"high_risk","reasons":["advance payment"],"risk_signal_count":1,"model_version":"test"}`))
 	}))
 	defer server.Close()
 
@@ -25,5 +25,8 @@ func TestScam(t *testing.T) {
 	}
 	if result.Label != "high_risk" || result.Score != 0.91 {
 		t.Fatalf("unexpected result: %#v", result)
+	}
+	if result.RiskSignalCount == nil || *result.RiskSignalCount != 1 {
+		t.Fatalf("risk signal count = %#v, want 1", result.RiskSignalCount)
 	}
 }

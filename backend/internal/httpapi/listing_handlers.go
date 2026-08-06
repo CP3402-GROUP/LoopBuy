@@ -487,6 +487,10 @@ func (s *Server) latestAssessment(response http.ResponseWriter, request *http.Re
 }
 
 func (s *Server) runScamAssessment(request *http.Request, input store.ListingInput) store.AssessmentInput {
+	if !s.scamModerationEnabled {
+		return disabledAssessment()
+	}
+
 	category := ""
 	if item, err := s.store.GetCategory(request.Context(), strconv.FormatInt(input.CategoryID, 10)); err == nil {
 		category = item.Name
@@ -503,11 +507,12 @@ func (s *Server) runScamAssessment(request *http.Request, input store.ListingInp
 		s.logger.Warn("scam assessment contract violation", "label", result.Label, "score", result.Score)
 		return store.AssessmentInput{Score: 0.5, Label: "needs_review", Reasons: []string{"Automated screening returned an inconsistent result"}, ModelVersion: "invalid-provider-response"}
 	}
-	return store.AssessmentInput{Score: result.Score, Label: result.Label, Reasons: result.Reasons, ModelVersion: result.ModelVersion}
+	return store.AssessmentInput{Score: result.Score, Label: result.Label, Reasons: result.Reasons, RiskSignalCount: result.RiskSignalCount, ModelVersion: result.ModelVersion}
 }
 
 func validAssessmentResult(result ml.ScamResult) bool {
-	if result.Score < 0 || result.Score > 1 || math.IsNaN(result.Score) || math.IsInf(result.Score, 0) || strings.TrimSpace(result.ModelVersion) == "" {
+	if result.Score < 0 || result.Score > 1 || math.IsNaN(result.Score) || math.IsInf(result.Score, 0) || strings.TrimSpace(result.ModelVersion) == "" ||
+		result.RiskSignalCount == nil || *result.RiskSignalCount < 0 || *result.RiskSignalCount > 5 || *result.RiskSignalCount > len(result.Reasons) {
 		return false
 	}
 	switch {
@@ -524,15 +529,23 @@ func unavailableAssessment() store.AssessmentInput {
 	return store.AssessmentInput{Score: 0.5, Label: "needs_review", Reasons: []string{"Automated screening is temporarily unavailable"}, ModelVersion: "unavailable"}
 }
 
+func disabledAssessment() store.AssessmentInput {
+	zeroSignals := 0
+	return store.AssessmentInput{
+		Score:           0,
+		Label:           "not_screened",
+		Reasons:         []string{"Automated scam moderation is temporarily disabled"},
+		RiskSignalCount: &zeroSignals,
+		ModelVersion:    "moderation-disabled",
+	}
+}
+
 func listingInput(payload listingRequest, current *model.Listing) (store.ListingInput, error) {
 	input := store.ListingInput{Currency: "SGD", Images: []store.ImageInput{}}
 	if current != nil {
 		input = store.ListingInput{CategoryID: current.CategoryID, Title: current.Title, Description: current.Description,
 			Brand: current.Brand, Location: current.Location, Price: current.Price, Currency: current.Currency,
-			ItemCondition: current.ItemCondition, Images: make([]store.ImageInput, 0, len(current.Images))}
-		for _, image := range current.Images {
-			input.Images = append(input.Images, store.ImageInput{ImageURL: image.ImageURL, SortOrder: image.SortOrder, IsPrimary: image.IsPrimary})
-		}
+			ItemCondition: current.ItemCondition, Images: []store.ImageInput{}}
 	}
 	if payload.CategoryID != nil {
 		input.CategoryID = *payload.CategoryID
@@ -559,7 +572,8 @@ func listingInput(payload listingRequest, current *model.Listing) (store.Listing
 		input.ItemCondition = normalizeCondition(*payload.ItemCondition)
 	}
 	if payload.Images != nil {
-		input.Images = *payload.Images
+		input.Images = append([]store.ImageInput(nil), (*payload.Images)...)
+		input.ReplaceImages = true
 	}
 	if input.CategoryID < 1 || input.Title == "" || len(input.Title) > 150 || len(input.Description) > 10_000 ||
 		len(input.Brand) > 100 || len(input.Location) > 120 || input.Price < 0 || input.Price > 99_999_999.99 ||

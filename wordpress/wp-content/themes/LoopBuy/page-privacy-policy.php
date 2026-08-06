@@ -33,7 +33,7 @@ get_header();
 
 		<section>
 			<h2><?php esc_html_e( 'AI features', 'loopbuy' ); ?></h2>
-			<p><?php esc_html_e( 'Search and assistant features may send relevant listing text and your prompt to configured AI providers, including OpenAI for embeddings and Qwen for language generation. Scam and recommendation scores are automated signals, not guarantees or final judgments. Avoid entering sensitive personal information into the assistant.', 'loopbuy' ); ?></p>
+			<p><?php esc_html_e( 'Search and assistant features may send relevant listing text and your prompt to configured AI providers, including OpenAI for embeddings and Qwen for language generation. When automated scam scoring is enabled, its scores and recommendation scores are signals, not guarantees or final judgments. Avoid entering sensitive personal information into the assistant.', 'loopbuy' ); ?></p>
 		</section>
 
 		<section>

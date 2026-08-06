@@ -430,56 +430,105 @@ function loopbuy_backend_string( $value, $fallback = '' ) {
 }
 
 /**
- * Find the first image URL in a listing DTO.
+ * Normalize every usable image in a listing DTO for storefront rendering.
+ *
+ * The Go API returns `images[]` with `image_url`, `sort_order`, and
+ * `is_primary`. Legacy single-image fields are accepted only as a fallback.
+ * URLs are converted to the same-origin media proxy and deduplicated before
+ * they reach HTML.
+ *
+ * @param array $listing Listing DTO.
+ * @return array<int,array{image_id:int,image_url:string,sort_order:int,is_primary:bool}>
+ */
+function loopbuy_backend_listing_images( $listing ) {
+	if ( ! is_array( $listing ) ) {
+		return array();
+	}
+
+	$raw_images = array();
+
+	if ( isset( $listing['images'] ) && is_array( $listing['images'] ) ) {
+		foreach ( $listing['images'] as $position => $image ) {
+			if ( ! is_array( $image ) ) {
+				continue;
+			}
+
+			$raw_images[] = array(
+				'image_id'   => isset( $image['image_id'] ) ? absint( $image['image_id'] ) : 0,
+				'image_url'  => isset( $image['url'] ) ? $image['url'] : ( isset( $image['image_url'] ) ? $image['image_url'] : '' ),
+				'sort_order' => isset( $image['sort_order'] ) && is_numeric( $image['sort_order'] ) ? (int) $image['sort_order'] : (int) $position,
+				'is_primary' => ! empty( $image['is_primary'] ),
+				'position'   => (int) $position,
+			);
+		}
+	}
+
+	usort(
+		$raw_images,
+		function ( $left, $right ) {
+			if ( $left['is_primary'] !== $right['is_primary'] ) {
+				return $left['is_primary'] ? -1 : 1;
+			}
+
+			if ( $left['sort_order'] !== $right['sort_order'] ) {
+				return $left['sort_order'] <=> $right['sort_order'];
+			}
+
+			return $left['position'] <=> $right['position'];
+		}
+	);
+
+	$images = array();
+	$seen   = array();
+
+	foreach ( $raw_images as $image ) {
+		$url = loopbuy_backend_public_image_url( $image['image_url'] );
+
+		if ( '' === $url || isset( $seen[ $url ] ) ) {
+			continue;
+		}
+
+		$seen[ $url ] = true;
+		$images[]     = array(
+			'image_id'   => $image['image_id'],
+			'image_url'  => $url,
+			'sort_order' => $image['sort_order'],
+			'is_primary' => $image['is_primary'],
+		);
+	}
+
+	if ( ! empty( $images ) ) {
+		return $images;
+	}
+
+	foreach ( array( 'primary_image_url', 'image_url' ) as $field ) {
+		$url = isset( $listing[ $field ] ) ? loopbuy_backend_public_image_url( $listing[ $field ] ) : '';
+
+		if ( '' !== $url && ! isset( $seen[ $url ] ) ) {
+			return array(
+				array(
+					'image_id'   => 0,
+					'image_url'  => $url,
+					'sort_order' => 0,
+					'is_primary' => true,
+				),
+			);
+		}
+	}
+
+	return array();
+}
+
+/**
+ * Find the primary image URL in a listing DTO.
  *
  * @param array $listing Listing DTO.
  * @return string
  */
 function loopbuy_backend_listing_image( $listing ) {
-	$candidates       = array();
-	$secondary_images = array();
+	$images = loopbuy_backend_listing_images( $listing );
 
-	if ( isset( $listing['image_url'] ) ) {
-		$candidates[] = $listing['image_url'];
-	}
-
-	if ( isset( $listing['primary_image_url'] ) ) {
-		$candidates[] = $listing['primary_image_url'];
-	}
-
-	if ( isset( $listing['images'] ) && is_array( $listing['images'] ) ) {
-		foreach ( $listing['images'] as $image ) {
-			if ( ! is_array( $image ) ) {
-				continue;
-			}
-
-			$image_url = isset( $image['url'] ) ? $image['url'] : ( isset( $image['image_url'] ) ? $image['image_url'] : '' );
-
-			if ( ! empty( $image['is_primary'] ) ) {
-				$candidates[] = $image_url;
-			} else {
-				$secondary_images[] = $image_url;
-			}
-		}
-	}
-
-	$candidates = array_merge( $candidates, $secondary_images );
-
-	foreach ( $candidates as $candidate ) {
-		if ( ! is_string( $candidate ) ) {
-			continue;
-		}
-
-		$candidate = trim( $candidate );
-
-		$candidate = loopbuy_backend_public_image_url( $candidate );
-
-		if ( '' !== $candidate ) {
-			return $candidate;
-		}
-	}
-
-	return '';
+	return isset( $images[0]['image_url'] ) ? $images[0]['image_url'] : '';
 }
 
 /**
@@ -594,7 +643,9 @@ function loopbuy_backend_normalize_listing( $listing ) {
 	$verified          = 'approved' === $moderation_status && 'low_risk' === $scam_label;
 	$safety_state      = 'unavailable';
 
-	if ( $verified ) {
+	if ( 'not_screened' === $scam_label ) {
+		$safety_state = 'disabled';
+	} elseif ( $verified ) {
 		$safety_state = 'approved';
 	} elseif ( in_array( $moderation_status, array( 'pending', 'queued', 'processing' ), true ) ) {
 		$safety_state = 'pending';
@@ -606,7 +657,8 @@ function loopbuy_backend_normalize_listing( $listing ) {
 		? max( 0, (int) $listing['views_count'] )
 		: 0;
 
-	$image_url = loopbuy_backend_listing_image( $listing );
+	$images    = loopbuy_backend_listing_images( $listing );
+	$image_url = isset( $images[0]['image_url'] ) ? $images[0]['image_url'] : '';
 
 	return array(
 		'id'                => $listing_id,
@@ -619,6 +671,7 @@ function loopbuy_backend_normalize_listing( $listing ) {
 		'category_name'     => $category_name,
 		'image'             => $image_url,
 		'image_url'         => $image_url,
+		'images'            => $images,
 		'description'       => isset( $listing['description'] ) && is_string( $listing['description'] )
 			? sanitize_textarea_field( $listing['description'] )
 			: '',
@@ -632,6 +685,7 @@ function loopbuy_backend_normalize_listing( $listing ) {
 		'category_id'       => isset( $listing['category']['id'] ) ? absint( $listing['category']['id'] ) : ( isset( $listing['category_id'] ) ? absint( $listing['category_id'] ) : 0 ),
 		'status'            => sanitize_key( loopbuy_backend_string( isset( $listing['status'] ) ? $listing['status'] : '' ) ),
 		'currency'          => strtoupper( loopbuy_backend_string( isset( $listing['currency'] ) ? $listing['currency'] : 'SGD' ) ),
+		'revision'          => isset( $listing['revision'] ) && is_numeric( $listing['revision'] ) ? max( 0, (int) $listing['revision'] ) : 0,
 		'created_at'        => loopbuy_backend_string( isset( $listing['created_at'] ) ? $listing['created_at'] : '' ),
 		'updated_at'        => loopbuy_backend_string( isset( $listing['updated_at'] ) ? $listing['updated_at'] : '' ),
 	);

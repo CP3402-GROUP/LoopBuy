@@ -69,6 +69,9 @@ func run(logger *slog.Logger) error {
 	storeValue := store.New(db)
 	tokenManager := auth.NewManager(cfg.JWTSecret, cfg.AccessTokenTTL)
 	mlClient := ml.NewClient(cfg.MLServiceURL, &http.Client{Timeout: 6 * time.Second})
+	if !cfg.ScamModerationEnabled {
+		logger.Warn("automated scam moderation is disabled; listings will publish as not screened")
+	}
 
 	var googleAuth auth.GoogleAuthenticator
 	if cfg.GoogleClientID != "" || cfg.GoogleClientSecret != "" || len(cfg.GoogleRedirectURIs) > 0 {
@@ -148,7 +151,7 @@ func run(logger *slog.Logger) error {
 		VerificationMailer: verificationMailer, VerificationURL: cfg.EmailVerificationURL,
 		VerificationTTL: cfg.EmailVerificationTTL, VerificationSecret: cfg.JWTSecret,
 		EmailHourlyLimit: cfg.ResendMaxEmailsHour,
-		ML:               mlClient, Embedder: embedder,
+		ML:               mlClient, ScamModerationEnabled: cfg.ScamModerationEnabled, Embedder: embedder,
 		Vectors: vectors, Chat: chatModel, Logger: logger, RefreshTTL: cfg.RefreshTTL,
 		OpenAIMaxRequestsHour: cfg.OpenAIMaxRequestsHour, OpenAIMaxRequestsUserDay: cfg.OpenAIMaxRequestsUserDay,
 		QwenMaxRequestsHour: cfg.QwenMaxRequestsHour, QwenMaxRequestsUserDay: cfg.QwenMaxRequestsUserDay,

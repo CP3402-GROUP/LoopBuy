@@ -15,7 +15,7 @@ func TestEmbeddedMigrationsLoad(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loadMigrations(embedded) error = %v", err)
 	}
-	if got, want := len(migrations), 9; got != want {
+	if got, want := len(migrations), 11; got != want {
 		t.Fatalf("embedded migration count = %d, want %d", got, want)
 	}
 	if migrations[0].Name != "001_init.sql" || migrations[0].Transactional {
@@ -44,6 +44,12 @@ func TestEmbeddedMigrationsLoad(t *testing.T) {
 	}
 	if migrations[8].Name != "009_provider_request_budgets.sql" || migrations[8].Transactional {
 		t.Fatalf("ninth embedded migration = %#v, want non-transactional 009_provider_request_budgets.sql", migrations[8])
+	}
+	if migrations[9].Name != "010_scam_signal_audit.sql" || migrations[9].Transactional {
+		t.Fatalf("tenth embedded migration = %#v, want non-transactional 010_scam_signal_audit.sql", migrations[9])
+	}
+	if migrations[10].Name != "011_classify_legacy_moderation.sql" || !migrations[10].Transactional {
+		t.Fatalf("eleventh embedded migration = %#v, want transactional 011_classify_legacy_moderation.sql", migrations[10])
 	}
 }
 

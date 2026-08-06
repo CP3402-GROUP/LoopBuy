@@ -43,6 +43,9 @@ type ListingInput struct {
 	Currency      string
 	ItemCondition string
 	Images        []ImageInput
+	// ReplaceImages makes UpdateListing replace all existing image rows with Images.
+	// CreateListing always persists Images, regardless of this flag.
+	ReplaceImages bool
 }
 
 type ImageInput struct {
@@ -52,10 +55,11 @@ type ImageInput struct {
 }
 
 type AssessmentInput struct {
-	Score        float64
-	Label        string
-	Reasons      []string
-	ModelVersion string
+	Score           float64
+	Label           string
+	Reasons         []string
+	RiskSignalCount *int
+	ModelVersion    string
 }
 
 func (s *Store) ListCategories(ctx context.Context, includeInactive bool) ([]model.Category, error) {
@@ -176,14 +180,29 @@ func (s *Store) DeleteCategory(ctx context.Context, categoryID int64) error {
 }
 
 func moderationForAssessment(assessment AssessmentInput) (status, moderation string) {
-	// The database must fail closed if a provider ever returns a malformed or
-	// internally inconsistent result. Only the documented low-risk interval is
-	// eligible for automatic publication.
-	if assessment.Label == "low_risk" && assessment.Score >= 0 && assessment.Score < 0.45 &&
-		!math.IsNaN(assessment.Score) && !math.IsInf(assessment.Score, 0) {
+	// This explicit server-side sentinel is emitted only when the deploy-time
+	// moderation feature flag is off. Listings remain publishable, but the
+	// not_screened label prevents the storefront from claiming verification.
+	if assessment.ModelVersion == "moderation-disabled" && assessment.Label == "not_screened" {
 		return "active", "approved"
 	}
-	return "under_review", "pending"
+
+	// The database must fail closed if a provider ever returns a malformed or
+	// internally inconsistent result. Automatic publication requires a completed
+	// assessment with an explicit signal count and no lexical scam signal.
+	validScore := assessment.Score >= 0 && assessment.Score <= 1 &&
+		!math.IsNaN(assessment.Score) && !math.IsInf(assessment.Score, 0)
+	noExplicitSignals := assessment.RiskSignalCount != nil && *assessment.RiskSignalCount == 0
+
+	if validScore && noExplicitSignals &&
+		(assessment.Label == "low_risk" && assessment.Score < 0.45 ||
+			assessment.Label == "needs_review" && assessment.Score >= 0.45 && assessment.Score < 0.55) {
+		return "active", "approved"
+	}
+	if assessment.ModelVersion == "unavailable" || assessment.ModelVersion == "invalid-provider-response" || assessment.RiskSignalCount == nil {
+		return "under_review", "unavailable"
+	}
+	return "under_review", "review"
 }
 
 func (s *Store) CreateListing(ctx context.Context, sellerID int64, input ListingInput, assessment AssessmentInput) (model.Listing, error) {
@@ -236,14 +255,18 @@ func (s *Store) UpdateListing(ctx context.Context, listingID, actorID int64, isA
 
 	var sellerID int64
 	var currentStatus string
+	var currentModeration string
 	var currentRevision uint64
-	if err := tx.QueryRowContext(ctx, `SELECT seller_id, status, revision FROM listings WHERE listing_id = ? FOR UPDATE`, listingID).Scan(&sellerID, &currentStatus, &currentRevision); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT seller_id, status, moderation_status, revision FROM listings WHERE listing_id = ? FOR UPDATE`, listingID).Scan(&sellerID, &currentStatus, &currentModeration, &currentRevision); err != nil {
 		return model.Listing{}, normalizeSQLError(err)
 	}
 	if sellerID != actorID && !isAdmin {
 		return model.Listing{}, ErrNotFound
 	}
 	if currentStatus == "sold" || currentStatus == "archived" {
+		return model.Listing{}, ErrInvalidState
+	}
+	if currentModeration == "rejected" && !isAdmin {
 		return model.Listing{}, ErrInvalidState
 	}
 	if currentRevision != expectedRevision {
@@ -264,8 +287,10 @@ func (s *Store) UpdateListing(ctx context.Context, listingID, actorID int64, isA
 	if err != nil {
 		return model.Listing{}, err
 	}
-	if err := replaceImages(ctx, tx, listingID, input.Images); err != nil {
-		return model.Listing{}, err
+	if input.ReplaceImages {
+		if err := replaceImages(ctx, tx, listingID, input.Images); err != nil {
+			return model.Listing{}, err
+		}
 	}
 	if err := insertAssessment(ctx, tx, listingID, assessment); err != nil {
 		return model.Listing{}, err
@@ -291,18 +316,22 @@ func (s *Store) ReassessListing(ctx context.Context, listingID, actorID int64, i
 
 	var sellerID int64
 	var currentStatus string
+	var currentModeration string
 	var currentRevision uint64
 	var categoryActive bool
 	if err := tx.QueryRowContext(ctx, `
-		SELECT l.seller_id, l.status, l.revision, c.is_active
+		SELECT l.seller_id, l.status, l.moderation_status, l.revision, c.is_active
 		FROM listings l JOIN categories c ON c.category_id = l.category_id
-		WHERE l.listing_id = ? FOR UPDATE`, listingID).Scan(&sellerID, &currentStatus, &currentRevision, &categoryActive); err != nil {
+		WHERE l.listing_id = ? FOR UPDATE`, listingID).Scan(&sellerID, &currentStatus, &currentModeration, &currentRevision, &categoryActive); err != nil {
 		return model.Listing{}, normalizeSQLError(err)
 	}
 	if sellerID != actorID && !isAdmin {
 		return model.Listing{}, ErrNotFound
 	}
 	if currentStatus == "sold" || currentStatus == "archived" || !categoryActive {
+		return model.Listing{}, ErrInvalidState
+	}
+	if currentModeration == "rejected" && !isAdmin {
 		return model.Listing{}, ErrInvalidState
 	}
 	if currentRevision != expectedRevision {
@@ -660,8 +689,8 @@ func insertAssessment(ctx context.Context, tx *sql.Tx, listingID int64, assessme
 		return err
 	}
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO scam_assessments (listing_id, score, label, reasons, model_version)
-		VALUES (?, ?, ?, ?, ?)`, listingID, assessment.Score, assessment.Label, reasons, assessment.ModelVersion)
+		INSERT INTO scam_assessments (listing_id, score, label, reasons, risk_signal_count, model_version)
+		VALUES (?, ?, ?, ?, ?, ?)`, listingID, assessment.Score, assessment.Label, reasons, assessment.RiskSignalCount, assessment.ModelVersion)
 	return err
 }
 
@@ -864,9 +893,9 @@ func (s *Store) LatestAssessment(ctx context.Context, listingID int64) (model.Sc
 	var item model.ScamAssessment
 	var reasons []byte
 	err := s.db.QueryRowContext(ctx, `
-		SELECT assessment_id, listing_id, score, label, reasons, model_version, created_at
+		SELECT assessment_id, listing_id, score, label, reasons, risk_signal_count, model_version, created_at
 		FROM scam_assessments WHERE listing_id = ? ORDER BY assessment_id DESC LIMIT 1`, listingID).Scan(
-		&item.AssessmentID, &item.ListingID, &item.Score, &item.Label, &reasons, &item.ModelVersion, &item.CreatedAt)
+		&item.AssessmentID, &item.ListingID, &item.Score, &item.Label, &reasons, &item.RiskSignalCount, &item.ModelVersion, &item.CreatedAt)
 	if err != nil {
 		return model.ScamAssessment{}, normalizeSQLError(err)
 	}

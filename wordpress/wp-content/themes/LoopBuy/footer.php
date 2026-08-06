@@ -61,7 +61,7 @@ $loopbuy_terms_url        = $loopbuy_terms_page ? get_permalink( $loopbuy_terms_
 				</div><!-- .site-branding -->
 
 				<p class="footer-tagline">
-					<?php esc_html_e( 'Buy smarter. Sell safer. The trusted second-hand marketplace powered by AI scam detection.', 'loopbuy' ); ?>
+					<?php esc_html_e( 'Buy smarter and sell with confidence using useful search, listing, and messaging tools.', 'loopbuy' ); ?>
 				</p>
 			</div><!-- .footer-brand -->
 

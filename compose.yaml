@@ -112,6 +112,7 @@ services:
       QDRANT_COLLECTION: ${QDRANT_COLLECTION:-loopbuy_listings_v1}
       QDRANT_VECTOR_NAME: ${QDRANT_VECTOR_NAME:-listing_text_v1}
       ML_SERVICE_URL: http://ml:8000
+      SCAM_MODERATION_ENABLED: ${SCAM_MODERATION_ENABLED:-false}
       QWEN_API_KEY: ${QWEN_API_KEY:-}
       QWEN_BASE_URL: ${QWEN_BASE_URL:-https://dashscope-intl.aliyuncs.com/compatible-mode/v1}
       QWEN_MODEL: ${QWEN_MODEL:-qwen3.5-flash}
